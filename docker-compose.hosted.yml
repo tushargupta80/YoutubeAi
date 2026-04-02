@@ -1,0 +1,58 @@
+﻿services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    env_file:
+      - backend/.env
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      FRONTEND_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      OLLAMA_BASE_URL: http://ollama:11434
+      VECTOR_INDEX_DIR: /app/backend/data/faiss
+    ports:
+      - "4000:4000"
+    depends_on:
+      - ollama
+    volumes:
+      - faiss_data:/app/backend/data/faiss
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    env_file:
+      - backend/.env
+    environment:
+      NODE_ENV: production
+      OLLAMA_BASE_URL: http://ollama:11434
+      VECTOR_INDEX_DIR: /app/backend/data/faiss
+    depends_on:
+      - backend
+      - ollama
+    volumes:
+      - faiss_data:/app/backend/data/faiss
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  ollama_data:
+  faiss_data:

@@ -1,0 +1,4 @@
+ALTER TABLE ai_provider_events
+ADD COLUMN IF NOT EXISTS input_tokens INTEGER,
+ADD COLUMN IF NOT EXISTS output_tokens INTEGER,
+ADD COLUMN IF NOT EXISTS estimated_cost_usd NUMERIC(12, 6);

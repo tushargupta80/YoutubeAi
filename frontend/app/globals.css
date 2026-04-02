@@ -1,0 +1,440 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply font-body text-ink;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(15, 118, 110, 0.18), transparent 22%),
+    radial-gradient(circle at 88% 18%, rgba(180, 83, 9, 0.12), transparent 22%),
+    linear-gradient(180deg, #fbf7ef 0%, #f3ede2 42%, #efe6d7 100%);
+}
+
+.hero-orb {
+  position: absolute;
+  z-index: 0;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.6;
+}
+
+.hero-orb-left {
+  top: 3rem;
+  left: -4rem;
+  height: 14rem;
+  width: 14rem;
+  background: rgba(15, 118, 110, 0.18);
+}
+
+.hero-orb-right {
+  top: 8rem;
+  right: -3rem;
+  height: 16rem;
+  width: 16rem;
+  background: rgba(180, 83, 9, 0.14);
+}
+
+.hero-panel {
+  @apply relative z-10 rounded-[2.5rem] border border-white/70 bg-[rgba(255,252,247,0.78)] p-6 shadow-card backdrop-blur md:p-8 lg:p-10;
+}
+
+.pipeline-panel {
+  @apply flex h-full flex-col justify-between rounded-[2rem] border border-stone-300/80 bg-white/75 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur;
+}
+
+.pipeline-step {
+  @apply flex items-start gap-4 rounded-[1.5rem] border border-stone-200 bg-stone-50/90 px-4 py-4;
+}
+
+.pipeline-index {
+  @apply inline-flex h-10 w-10 flex-none items-center justify-center rounded-full bg-ink text-xs font-semibold tracking-[0.2em] text-white;
+}
+
+.stat-card {
+  @apply rounded-[1.6rem] border border-stone-300/80 bg-white/80 px-4 py-4 shadow-[0_10px_35px_rgba(23,23,23,0.06)];
+}
+
+.stat-label {
+  @apply text-[11px] uppercase tracking-[0.24em] text-stone-500;
+}
+
+.stat-value {
+  @apply mt-2 font-display text-2xl text-ink;
+}
+
+.surface-card {
+  @apply rounded-[2rem] border border-stone-300/80 bg-white/80 shadow-card backdrop-blur;
+}
+
+.section-kicker {
+  @apply text-xs uppercase tracking-[0.3em] text-stone-500;
+}
+
+.prose-notes {
+  @apply max-w-none;
+}
+
+.prose-notes h1,
+.prose-notes h2,
+.prose-notes h3 {
+  @apply font-display text-ink;
+}
+
+.prose-notes h1 {
+  @apply text-4xl;
+}
+
+.prose-notes h2 {
+  @apply mt-8 border-t border-stone-200 pt-6 text-3xl;
+}
+
+.prose-notes h3 {
+  @apply mt-6 text-2xl;
+}
+
+.prose-notes p,
+.prose-notes li {
+  @apply text-[15px] leading-8 text-stone-800;
+}
+
+.prose-notes ul,
+.prose-notes ol {
+  @apply pl-5;
+}
+
+.prose-notes strong {
+  @apply font-semibold text-ink;
+}
+
+.prose-notes table {
+  @apply my-5 w-full border-collapse overflow-hidden rounded-[1.4rem] border border-stone-300;
+}
+
+.prose-notes th,
+.prose-notes td {
+  @apply border border-stone-300 px-4 py-3 text-left align-top;
+}
+
+.prose-notes thead th {
+  @apply bg-stone-100 text-xs uppercase tracking-[0.18em] text-stone-600;
+}
+
+.prose-notes blockquote {
+  @apply my-5 rounded-r-[1.5rem] border-l-4 border-accent bg-accentSoft px-4 py-3 text-stone-800;
+}
+
+.prose-notes pre {
+  @apply overflow-x-auto rounded-[1.5rem] bg-stone-950 p-4 text-stone-100;
+}
+
+.prose-notes code {
+  @apply rounded bg-stone-100 px-1.5 py-0.5 text-sm text-stone-800;
+}
+
+.diagram-section-heading {
+  @apply mt-10 rounded-[1.8rem] border border-stone-300/80 bg-[linear-gradient(135deg,rgba(15,118,110,0.08),rgba(255,255,255,0.9))] px-5 py-5 shadow-[0_12px_40px_rgba(23,23,23,0.05)];
+}
+
+.diagram-section-heading h2 {
+  @apply mt-2 border-none pt-0 text-3xl;
+}
+
+.diagram-section-kicker {
+  @apply text-[11px] uppercase tracking-[0.28em] text-teal-700;
+}
+
+.diagram-section-copy {
+  @apply mt-2 max-w-3xl text-sm leading-7 text-stone-600;
+}
+
+.diagram-shell {
+  @apply my-6 overflow-hidden rounded-[1.8rem] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(245,252,251,0.96),rgba(255,255,255,0.94))] shadow-[0_20px_60px_rgba(23,23,23,0.07)];
+}
+
+.diagram-shell-header {
+  @apply flex flex-wrap items-end justify-between gap-4 border-b border-stone-200/80 px-5 py-4;
+}
+
+.diagram-shell-kicker {
+  @apply text-[11px] uppercase tracking-[0.26em] text-stone-500;
+}
+
+.diagram-shell-title {
+  @apply mt-1 font-display text-2xl text-ink;
+}
+
+.diagram-shell-hint {
+  @apply text-sm text-stone-500;
+}
+
+.diagram-canvas {
+  @apply relative overflow-hidden p-4 md:p-5;
+}
+
+.diagram-canvas-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.4), transparent 92%);
+  pointer-events: none;
+}
+
+.relationship-diagram-board {
+  @apply relative grid gap-6;
+}
+
+.relationship-center-card {
+  @apply relative mx-auto max-w-2xl rounded-[1.7rem] border border-teal-200 bg-[linear-gradient(135deg,rgba(15,118,110,0.14),rgba(255,255,255,0.98))] px-6 py-6 text-center shadow-[0_18px_45px_rgba(23,23,23,0.06)];
+}
+
+.relationship-center-kicker {
+  @apply text-[11px] uppercase tracking-[0.28em] text-teal-700;
+}
+
+.relationship-center-title {
+  @apply mt-3 font-display text-3xl leading-tight text-ink;
+}
+
+.relationship-center-meta {
+  @apply mt-3 text-sm leading-7 text-stone-600;
+}
+
+.relationship-branch-grid {
+  @apply grid gap-4;
+}
+
+.relationship-branch-card {
+  @apply relative rounded-[1.4rem] border border-stone-200/90 bg-white/95 px-5 py-5 shadow-[0_18px_45px_rgba(23,23,23,0.06)];
+}
+
+.relationship-branch-card::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 2px;
+  height: 14px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(13, 148, 136, 0.75), rgba(13, 148, 136, 0.15));
+}
+
+.relationship-branch-relation {
+  @apply text-[11px] uppercase tracking-[0.24em] text-stone-500;
+}
+
+.relationship-branch-title {
+  @apply mt-2 font-display text-2xl leading-tight text-ink;
+}
+
+.relationship-branch-copy {
+  @apply mt-3 text-sm leading-7 text-stone-600;
+}
+
+.relationship-branch-list {
+  @apply mt-4 list-none space-y-3 pl-0;
+}
+
+.relationship-branch-list li {
+  @apply rounded-[1rem] border border-stone-200 bg-stone-50/85 px-4 py-3;
+}
+
+.relationship-branch-list span {
+  @apply block text-sm font-medium leading-6 text-stone-800;
+}
+
+.relationship-branch-list em {
+  @apply mt-1 block text-xs not-italic uppercase tracking-[0.18em] text-stone-500;
+}
+
+.mermaid-card {
+  @apply relative my-0 overflow-x-auto rounded-[1.4rem] border border-stone-200/90 bg-white/95 p-4 shadow-[0_18px_45px_rgba(23,23,23,0.06)];
+}
+
+.mermaid-card svg {
+  @apply h-auto min-w-full;
+}
+
+.mermaid-fallback {
+  @apply bg-stone-50;
+}
+
+.diagram-fallback-copy {
+  @apply mb-3 text-sm leading-7 text-stone-700;
+}
+
+.mermaid-fallback pre {
+  @apply whitespace-pre-wrap rounded-[1rem] bg-stone-950 p-4 text-sm leading-7 text-stone-100;
+}
+
+.mermaid-card svg text {
+  font-size: 14px !important;
+  font-family: "Segoe UI", sans-serif !important;
+}
+
+.mermaid-card svg .nodeLabel,
+.mermaid-card svg .edgeLabel,
+.mermaid-card svg foreignObject {
+  font-size: 14px !important;
+  font-family: "Segoe UI", sans-serif !important;
+}
+
+@media (min-width: 960px) {
+  .relationship-diagram-board {
+    @apply gap-8;
+  }
+
+  .relationship-branch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+.topic-preview-shell {
+  @apply overflow-hidden rounded-[1.8rem] border border-stone-300/80 bg-[linear-gradient(135deg,rgba(17,24,39,0.96),rgba(15,118,110,0.88))] p-5 text-white shadow-[0_22px_65px_rgba(23,23,23,0.14)];
+}
+
+.topic-preview-header {
+  @apply flex flex-wrap items-start justify-between gap-4;
+}
+
+.topic-preview-kicker {
+  @apply text-[11px] uppercase tracking-[0.3em] text-teal-100/80;
+}
+
+.topic-preview-title {
+  @apply mt-2 font-display text-3xl leading-tight text-white;
+}
+
+.topic-preview-actions {
+  @apply flex flex-wrap items-center gap-3;
+}
+
+.topic-preview-button {
+  @apply rounded-full px-4 py-2 text-sm font-medium transition;
+}
+
+.topic-preview-button-primary {
+  @apply bg-white text-stone-900 hover:bg-stone-100;
+}
+
+.topic-preview-status {
+  @apply text-xs uppercase tracking-[0.22em] text-teal-100/80;
+}
+
+.topic-preview-stage {
+  @apply mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)];
+}
+
+.topic-preview-screen {
+  @apply relative overflow-hidden rounded-[1.6rem] p-5 min-h-[340px] flex items-center justify-center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+}
+
+.topic-preview-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(35px);
+  opacity: 0.75;
+}
+
+.topic-preview-orb-left {
+  top: 22px;
+  left: 18px;
+  width: 140px;
+  height: 140px;
+  background: rgba(45, 212, 191, 0.34);
+}
+
+.topic-preview-orb-right {
+  right: 20px;
+  bottom: 24px;
+  width: 180px;
+  height: 180px;
+  background: rgba(251, 191, 36, 0.24);
+}
+
+.topic-preview-slide-card {
+  @apply relative z-10 max-w-2xl rounded-[1.6rem] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)] backdrop-blur;
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.topic-preview-slide-index {
+  @apply text-[11px] uppercase tracking-[0.24em] text-teal-100/80;
+}
+
+.topic-preview-slide-title {
+  @apply mt-3 font-display text-4xl leading-tight text-white;
+}
+
+.topic-preview-slide-copy {
+  @apply mt-4 text-base leading-8 text-stone-100;
+}
+
+.topic-preview-takeaway {
+  @apply mt-5 rounded-[1.2rem] px-4 py-3;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.topic-preview-takeaway span {
+  @apply block text-[11px] uppercase tracking-[0.22em] text-teal-100/75;
+}
+
+.topic-preview-takeaway strong {
+  @apply mt-2 block text-sm font-medium leading-7 text-white;
+}
+
+.topic-preview-timeline {
+  @apply grid gap-3;
+}
+
+.topic-preview-chip {
+  @apply flex items-start gap-3 rounded-[1.2rem] px-4 py-3 text-left transition;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.topic-preview-chip:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.topic-preview-chip.is-active {
+  @apply shadow-[0_14px_34px_rgba(0,0,0,0.14)];
+  border-color: rgba(153, 246, 228, 0.60);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.topic-preview-chip-step {
+  @apply inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-xs font-semibold text-white;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.topic-preview-chip-title {
+  @apply text-sm font-medium leading-6 text-white;
+}
+
+
+.topic-preview-language-toggle {
+  @apply inline-flex rounded-full border border-white/15 bg-white/10 p-1;
+}
+
+.topic-preview-language-pill {
+  @apply rounded-full px-3 py-2 text-xs font-medium uppercase tracking-[0.18em] text-white/75 transition;
+}
+
+.topic-preview-language-pill.is-active {
+  @apply bg-white text-stone-900 shadow-[0_8px_22px_rgba(0,0,0,0.12)];
+}

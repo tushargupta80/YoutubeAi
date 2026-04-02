@@ -1,0 +1,24 @@
+{
+  "name": "workers",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch worker.js",
+    "dev:ingest": "node --watch ingest.worker.js",
+    "dev:embed": "node --watch embed.worker.js",
+    "dev:notes": "node --watch notes.worker.js",
+    "dev:qa": "node --watch qa.worker.js",
+    "start": "node worker.js",
+    "start:ingest": "node ingest.worker.js",
+    "start:embed": "node embed.worker.js",
+    "start:notes": "node notes.worker.js",
+    "start:qa": "node qa.worker.js",
+    "build": "node -e \"console.log('worker build complete')\"",
+    "lint": "node -e \"console.log('worker lint placeholder')\""
+  },
+  "dependencies": {
+    "bullmq": "^5.12.12",
+    "dotenv": "^16.4.5"
+  }
+}

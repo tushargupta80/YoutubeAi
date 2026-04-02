@@ -1,0 +1,5 @@
+ALTER TABLE queue_dead_letters
+ADD COLUMN IF NOT EXISTS replay_count INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE queue_dead_letters
+ADD COLUMN IF NOT EXISTS last_replayed_at TIMESTAMPTZ;

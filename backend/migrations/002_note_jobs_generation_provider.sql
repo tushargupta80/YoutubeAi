@@ -1,0 +1,1 @@
+ALTER TABLE note_jobs ADD COLUMN IF NOT EXISTS generation_provider TEXT;

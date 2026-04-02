@@ -1,0 +1,241 @@
+services:
+  - type: web
+    name: ainotes-frontend
+    runtime: docker
+    dockerfilePath: ./docker/frontend.Dockerfile
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://ainotes-api.onrender.com
+
+  - type: web
+    name: ainotes-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.api
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: SERVICE_NAME
+        value: backend
+      - key: FRONTEND_URL
+        value: https://ainotes-frontend.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://ainotes-frontend.onrender.com
+      - key: DB_SSL
+        value: true
+      - key: VECTOR_STORE_PROVIDER
+        value: postgres
+      - key: DEFAULT_TOP_K
+        value: 6
+      - key: PROVIDER_REQUEST_LOG_ENABLED
+        value: true
+      - key: PROVIDER_CIRCUIT_BREAKER_ENABLED
+        value: true
+      - key: OBSERVABILITY_METRICS_WINDOW_SIZE
+        value: 1000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ainotes-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ainotes-redis
+          property: connectionString
+      - key: AUTH_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+
+  - type: worker
+    name: ainotes-worker-ingest
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVICE_NAME
+        value: worker-ingest
+      - key: WORKER_ENTRY
+        value: ingest.worker.js
+      - key: DB_SSL
+        value: true
+      - key: VECTOR_STORE_PROVIDER
+        value: postgres
+      - key: DEFAULT_TOP_K
+        value: 6
+      - key: PROVIDER_REQUEST_LOG_ENABLED
+        value: true
+      - key: PROVIDER_CIRCUIT_BREAKER_ENABLED
+        value: true
+      - key: OBSERVABILITY_METRICS_WINDOW_SIZE
+        value: 1000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ainotes-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ainotes-redis
+          property: connectionString
+      - key: AUTH_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+
+  - type: worker
+    name: ainotes-worker-embed
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVICE_NAME
+        value: worker-embed
+      - key: WORKER_ENTRY
+        value: embed.worker.js
+      - key: DB_SSL
+        value: true
+      - key: VECTOR_STORE_PROVIDER
+        value: postgres
+      - key: DEFAULT_TOP_K
+        value: 6
+      - key: PROVIDER_REQUEST_LOG_ENABLED
+        value: true
+      - key: PROVIDER_CIRCUIT_BREAKER_ENABLED
+        value: true
+      - key: OBSERVABILITY_METRICS_WINDOW_SIZE
+        value: 1000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ainotes-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ainotes-redis
+          property: connectionString
+      - key: AUTH_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+
+  - type: worker
+    name: ainotes-worker-notes
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVICE_NAME
+        value: worker-notes
+      - key: WORKER_ENTRY
+        value: notes.worker.js
+      - key: DB_SSL
+        value: true
+      - key: VECTOR_STORE_PROVIDER
+        value: postgres
+      - key: DEFAULT_TOP_K
+        value: 6
+      - key: PROVIDER_REQUEST_LOG_ENABLED
+        value: true
+      - key: PROVIDER_CIRCUIT_BREAKER_ENABLED
+        value: true
+      - key: OBSERVABILITY_METRICS_WINDOW_SIZE
+        value: 1000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ainotes-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ainotes-redis
+          property: connectionString
+      - key: AUTH_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+
+  - type: worker
+    name: ainotes-worker-qa
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVICE_NAME
+        value: worker-qa
+      - key: WORKER_ENTRY
+        value: qa.worker.js
+      - key: DB_SSL
+        value: true
+      - key: VECTOR_STORE_PROVIDER
+        value: postgres
+      - key: DEFAULT_TOP_K
+        value: 6
+      - key: PROVIDER_REQUEST_LOG_ENABLED
+        value: true
+      - key: PROVIDER_CIRCUIT_BREAKER_ENABLED
+        value: true
+      - key: OBSERVABILITY_METRICS_WINDOW_SIZE
+        value: 1000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ainotes-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ainotes-redis
+          property: connectionString
+      - key: AUTH_SECRET
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+
+  - type: redis
+    name: ainotes-redis
+    plan: starter
+    ipAllowList: []
+
+databases:
+  - name: ainotes-postgres
+    databaseName: youtube_notes
+    plan: starter
+    ipAllowList: []

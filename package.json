@@ -1,0 +1,26 @@
+{
+    "name":  "youtube-study-notes-generator",
+    "private":  true,
+    "version":  "1.0.0",
+    "type":  "module",
+    "workspaces":  [
+                       "frontend",
+                       "backend",
+                       "workers"
+                   ],
+    "scripts":  {
+                    "dev:frontend":  "npm --workspace frontend run dev",
+                    "dev:backend":  "npm --workspace backend run dev",
+                    "dev:worker":  "npm --workspace workers run dev",
+                    "build":  "npm run build --workspace frontend \u0026\u0026 npm run build --workspace backend \u0026\u0026 npm run build --workspace workers",
+                    "lint":  "npm run lint --workspace frontend \u0026\u0026 npm run lint --workspace backend \u0026\u0026 npm run lint --workspace workers",
+                    "test:backend":  "npm run test --workspace backend",
+                    "smoke:production":  "node scripts/smoke-production.mjs",
+                    "observability:export":  "node scripts/export-observability-snapshot.mjs",
+                    "load:generate-notes":  "node scripts/load/generate-notes-load.mjs",
+                    "secrets:auth":  "node scripts/generate-auth-secret.mjs",
+                    "observability:prometheus":  "node scripts/export-prometheus-metrics.mjs",
+                    "autoscaling:hints":  "node scripts/derive-autoscaling-hints.mjs",
+                    "benchmark:providers":  "node scripts/benchmark-provider-latency.mjs"
+                }
+}
