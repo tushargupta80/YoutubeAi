@@ -38,13 +38,25 @@ function shouldAttemptRefresh(path, options = {}) {
   ].includes(path);
 }
 
+function buildHeaders(options = {}) {
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  const hasBody = options.body !== undefined && options.body !== null;
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  if (hasBody && !isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return headers;
+}
+
 async function doFetch(path, options, controller) {
   return fetch(`${API_URL}/api${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
+    headers: buildHeaders(options),
     credentials: "include",
     signal: controller.signal,
     cache: "no-store"
@@ -283,4 +295,3 @@ export function askQuestion(videoId, question) {
     timeoutMs: 45000
   });
 }
-
