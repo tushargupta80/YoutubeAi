@@ -9,6 +9,8 @@ import { formatDateTime, joinWithDot } from "@/lib/display-format";
 import { useWorkspaceSession } from "@/hooks/useWorkspaceSession";
 
 function SessionPanel({ sessions, onRevoke, onLogoutAll, sessionRevokingId, loggingOutAll }) {
+  const [showSessions, setShowSessions] = useState(false);
+
   return (
     <section className="surface-card space-y-4 p-6 md:p-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -27,36 +29,52 @@ function SessionPanel({ sessions, onRevoke, onLogoutAll, sessionRevokingId, logg
         </button>
       </div>
 
-      <div className="space-y-3 text-sm text-stone-700">
-        {sessions.length ? sessions.map((session) => (
-          <div key={session.id} className="rounded-[1.4rem] border border-stone-200 bg-stone-50/80 p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-medium text-ink">{session.is_current ? "Current session" : "Signed-in device"}</p>
-                <p className="mt-1 text-xs text-stone-500">{joinWithDot([
-                  session.user_agent || "Unknown user agent",
-                  session.ip_address || "Unknown IP"
-                ])}</p>
-                <p className="mt-2 text-xs text-stone-500">{joinWithDot([
-                  `Created ${formatDateTime(session.created_at)}`,
-                  `Last used ${formatDateTime(session.last_used_at)}`,
-                  `Expires ${formatDateTime(session.expires_at)}`
-                ])}</p>
-              </div>
-              {!session.revoked_at ? (
-                <button
-                  type="button"
-                  onClick={() => onRevoke(session.id)}
-                  disabled={sessionRevokingId === session.id}
-                  className="rounded-full border border-red-300 bg-white px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-                >
-                  {sessionRevokingId === session.id ? "Revoking" : "Revoke"}
-                </button>
-              ) : <span className="rounded-full bg-stone-200 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-stone-600">Revoked</span>}
-            </div>
-          </div>
-        )) : <p className="text-stone-500">No active refresh sessions found.</p>}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
+        <div>
+          <p className="font-medium text-ink">Saved sessions</p>
+          <p className="mt-1 text-xs text-stone-500">{sessions.length} session{sessions.length === 1 ? "" : "s"} currently available to review.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowSessions((value) => !value)}
+          className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50"
+        >
+          {showSessions ? "Hide Sessions" : "View Sessions"}
+        </button>
       </div>
+
+      {showSessions ? (
+        <div className="space-y-3 text-sm text-stone-700">
+          {sessions.length ? sessions.map((session) => (
+            <div key={session.id} className="rounded-[1.4rem] border border-stone-200 bg-stone-50/80 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-ink">{session.is_current ? "Current session" : "Signed-in device"}</p>
+                  <p className="mt-1 text-xs text-stone-500">{joinWithDot([
+                    session.user_agent || "Unknown user agent",
+                    session.ip_address || "Unknown IP"
+                  ])}</p>
+                  <p className="mt-2 text-xs text-stone-500">{joinWithDot([
+                    `Created ${formatDateTime(session.created_at)}`,
+                    `Last used ${formatDateTime(session.last_used_at)}`,
+                    `Expires ${formatDateTime(session.expires_at)}`
+                  ])}</p>
+                </div>
+                {!session.revoked_at ? (
+                  <button
+                    type="button"
+                    onClick={() => onRevoke(session.id)}
+                    disabled={sessionRevokingId === session.id}
+                    className="rounded-full border border-red-300 bg-white px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {sessionRevokingId === session.id ? "Revoking" : "Revoke"}
+                  </button>
+                ) : <span className="rounded-full bg-stone-200 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-stone-600">Revoked</span>}
+              </div>
+            </div>
+          )) : <p className="text-stone-500">No active refresh sessions found.</p>}
+        </div>
+      ) : null}
     </section>
   );
 }
