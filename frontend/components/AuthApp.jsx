@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GenerateForm } from "@/components/GenerateForm";
 import { RuntimeSettingsCard } from "@/components/RuntimeSettingsCard";
@@ -83,7 +84,7 @@ async function optimizeAvatarFile(file) {
   return dataUrl;
 }
 
-function ProfilePanel({
+export function ProfilePanel({
   user,
   billing,
   sessions,
@@ -91,8 +92,7 @@ function ProfilePanel({
   onUpdateProfile,
   onChangePassword,
   profileSaving,
-  passwordSaving,
-  onClose
+  passwordSaving
 }) {
   const [displayName, setDisplayName] = useState(user?.name || "");
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar_url || "");
@@ -203,30 +203,8 @@ function ProfilePanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-stone-950/35 backdrop-blur-[2px]" role="dialog" aria-modal="true">
-      <button
-        type="button"
-        aria-label="Close profile drawer"
-        className="flex-1 cursor-default"
-        onClick={onClose}
-      />
-      <section className="h-full w-full max-w-[980px] overflow-y-auto border-l border-stone-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,245,240,0.98))] p-5 shadow-2xl md:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-[1.4rem] border border-stone-200 bg-white/85 px-4 py-3">
-          <div>
-            <p className="section-kicker">Workspace Profile</p>
-            <p className="mt-1 text-sm text-stone-600">Update your identity, password, and profile photo without leaving the workspace.</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50"
-          >
-            Close
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
+    <section className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
         <div className="rounded-[1.8rem] border border-stone-200 bg-gradient-to-br from-white via-stone-50 to-emerald-50 p-5 md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -413,10 +391,8 @@ function ProfilePanel({
             </button>
           </form>
         </article>
-        </div>
       </div>
-      </section>
-    </div>
+    </section>
   );
 }
 
@@ -575,12 +551,10 @@ function BillingPanel({ billing, onPurchase, purchasingPlanId }) {
     </section>
   );
 }
-
 export function AuthApp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showProfilePanel, setShowProfilePanel] = useState(false);
   const {
     mode,
     setMode,
@@ -683,31 +657,14 @@ export function AuthApp() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50"
-            onClick={() => setShowProfilePanel(true)}
-          >
+          <Link href="/profile" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50">
             View Profile
-          </button>
+          </Link>
           <button className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50" onClick={logout}>Logout</button>
         </div>
       </section>
 
       {error ? <div className="surface-card border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div> : null}
-
-      {showProfilePanel ? (
-        <ProfilePanel
-          user={user}
-          billing={billing}
-          sessions={sessions}
-          recentJobs={recentJobsBootstrap}
-          onUpdateProfile={updateProfile}
-          onChangePassword={changePassword}
-          profileSaving={profileSaving}
-          passwordSaving={passwordSaving}
-          onClose={() => setShowProfilePanel(false)}
-        />
-      ) : null}
 
       <BillingPanel
         billing={billing}
@@ -750,3 +707,122 @@ export function AuthApp() {
     </div>
   );
 }
+
+
+export function ProfileWorkspacePage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const {
+    mode,
+    setMode,
+    user,
+    billing,
+    sessions,
+    recentJobsBootstrap,
+    loading,
+    error,
+    setError,
+    authenticate,
+    logout,
+    logoutAll,
+    updateProfile,
+    changePassword,
+    purchasePlan,
+    revokeSession,
+    sessionRevokingId,
+    loggingOutAll,
+    purchasingPlanId,
+    profileSaving,
+    passwordSaving
+  } = useWorkspaceSession();
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    try {
+      await authenticate({ mode, name, email, password });
+      setPassword("");
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  async function handlePurchasePlan(planId) {
+    setError("");
+    try {
+      await purchasePlan(planId);
+    } catch (requestError) {
+      setError(requestError.message);
+    }
+  }
+
+  if (loading) {
+    return <div className="surface-card p-6">Loading profile...</div>;
+  }
+
+  if (!user) {
+    return (
+      <AuthPanel
+        mode={mode}
+        setMode={setMode}
+        name={name}
+        setName={setName}
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        error={error}
+        onSubmit={handleSubmit}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="surface-card flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+        <div>
+          <p className="section-kicker">Account</p>
+          <h1 className="mt-1 font-display text-3xl text-ink">Profile settings</h1>
+          <p className="mt-1 text-sm text-stone-700">Manage your identity, security, billing history, and active sessions.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/" className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50">
+            Back To Workspace
+          </Link>
+          <button className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50" onClick={logout}>Logout</button>
+        </div>
+      </section>
+
+      {error ? <div className="surface-card border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div> : null}
+
+      <ProfilePanel
+        user={user}
+        billing={billing}
+        sessions={sessions}
+        recentJobs={recentJobsBootstrap}
+        onUpdateProfile={updateProfile}
+        onChangePassword={changePassword}
+        profileSaving={profileSaving}
+        passwordSaving={passwordSaving}
+      />
+
+      <BillingPanel
+        billing={billing}
+        onPurchase={handlePurchasePlan}
+        purchasingPlanId={purchasingPlanId}
+      />
+
+      <SessionPanel
+        sessions={sessions}
+        onRevoke={revokeSession}
+        onLogoutAll={logoutAll}
+        sessionRevokingId={sessionRevokingId}
+        loggingOutAll={loggingOutAll}
+      />
+    </div>
+  );
+}
+
+
+
