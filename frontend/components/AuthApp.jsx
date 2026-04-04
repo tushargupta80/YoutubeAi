@@ -62,6 +62,8 @@ function SessionPanel({ sessions, onRevoke, onLogoutAll, sessionRevokingId, logg
 }
 
 function BillingPanel({ billing, onPurchase, purchasingPlanId }) {
+  const [showCreditHistory, setShowCreditHistory] = useState(false);
+
   if (!billing) return null;
 
   return (
@@ -104,29 +106,41 @@ function BillingPanel({ billing, onPurchase, purchasingPlanId }) {
       </div>
 
       <div className="rounded-[1.6rem] border border-stone-200 bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-sm font-medium text-ink">Recent credit activity</p>
             <p className="mt-1 text-xs text-stone-500">Starter credits, purchases, note charges, and refunds all appear here.</p>
           </div>
-          <div className="text-right text-xs text-stone-500">
-            <p>Lifetime credited: {billing.lifetimeCredited}</p>
-            <p>Lifetime spent: {billing.lifetimeSpent}</p>
+          <div className="flex flex-wrap items-start gap-3 md:items-center">
+            <div className="text-right text-xs text-stone-500">
+              <p>Lifetime credited: {billing.lifetimeCredited}</p>
+              <p>Lifetime spent: {billing.lifetimeSpent}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCreditHistory((value) => !value)}
+              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50"
+            >
+              {showCreditHistory ? "Hide Credit History" : "View Credit History"}
+            </button>
           </div>
         </div>
-        <div className="mt-4 space-y-3">
-          {billing.recentLedger?.length ? billing.recentLedger.map((entry) => (
-            <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm">
-              <div>
-                <p className="font-medium text-ink">{entry.description}</p>
-                <p className="mt-1 text-xs text-stone-500">{formatDateTime(entry.created_at)}</p>
+
+        {showCreditHistory ? (
+          <div className="mt-4 space-y-3">
+            {billing.recentLedger?.length ? billing.recentLedger.map((entry) => (
+              <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm">
+                <div>
+                  <p className="font-medium text-ink">{entry.description}</p>
+                  <p className="mt-1 text-xs text-stone-500">{formatDateTime(entry.created_at)}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.16em] ${Number(entry.delta) >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                  {Number(entry.delta) >= 0 ? `+${entry.delta}` : entry.delta} credits
+                </span>
               </div>
-              <span className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.16em] ${Number(entry.delta) >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                {Number(entry.delta) >= 0 ? `+${entry.delta}` : entry.delta} credits
-              </span>
-            </div>
-          )) : <p className="text-sm text-stone-500">No credit activity yet.</p>}
-        </div>
+            )) : <p className="text-sm text-stone-500">No credit activity yet.</p>}
+          </div>
+        ) : null}
       </div>
     </section>
   );
