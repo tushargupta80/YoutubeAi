@@ -248,6 +248,14 @@ export function generateNotes(youtubeUrl) {
   });
 }
 
+export function generateNotesFromTranscript({ title, transcript }) {
+  return request("/generate-notes/transcript", {
+    method: "POST",
+    body: JSON.stringify({ title, transcript }),
+    timeoutMs: 45000
+  });
+}
+
 export function cancelJob(jobId) {
   return request(`/jobs/${jobId}/cancel`, {
     method: "POST",
@@ -275,3 +283,4 @@ export function askQuestion(videoId, question) {
     timeoutMs: 45000
   });
 }
+

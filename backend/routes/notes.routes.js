@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { cancelJob, generateNotes, getJob, getRecentJobs } from "../api/notes.controller.js";
+import { cancelJob, generateNotes, generateNotesFromTranscript, getJob, getRecentJobs } from "../api/notes.controller.js";
 import { env } from "../config/env.js";
 import { createRateLimitMiddleware } from "../middleware/rate-limit.js";
 
@@ -12,6 +12,7 @@ const generateNotesRateLimit = createRateLimitMiddleware({
 });
 
 notesRouter.post("/generate-notes", generateNotesRateLimit, generateNotes);
+notesRouter.post("/generate-notes/transcript", generateNotesRateLimit, generateNotesFromTranscript);
 notesRouter.get("/jobs", getRecentJobs);
 notesRouter.get("/jobs/:jobId", getJob);
 notesRouter.post("/jobs/:jobId/cancel", cancelJob);

@@ -1,4 +1,4 @@
-import { cancelNotesJob, enqueueNotesJob, fetchJobStatus } from "../services/job.service.js";
+import { cancelNotesJob, enqueueManualTranscriptNotesJob, enqueueNotesJob, fetchJobStatus } from "../services/job.service.js";
 import { getBillingSummary } from "../services/billing.service.js";
 import { listRecentNoteJobs } from "../services/notes.repository.js";
 
@@ -20,6 +20,45 @@ export async function generateNotes(req, res, next) {
       status: reusedJob?.status || "queued",
       progress: reusedJob?.progress ?? 5,
       stage: reusedJob?.stage || "queued",
+      reused: Boolean(reusedJob),
+      reuseScope,
+      billing: {
+        creditsCharged: creditsCharged || 0,
+        balanceAfter
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function generateNotesFromTranscript(req, res, next) {
+  try {
+    const { title, transcript } = req.body;
+    if (!transcript || !String(transcript).trim()) {
+      return res.status(400).json({ error: "transcript is required" });
+    }
+
+    if (String(transcript).trim().length < 120) {
+      return res.status(400).json({ error: "Please paste a longer transcript so notes can be generated." });
+    }
+
+    const { jobId, video, reusedJob, reuseScope, creditsCharged, balanceAfter } = await enqueueManualTranscriptNotesJob({
+      title,
+      transcript,
+      userId: req.user.sub
+    });
+
+    return res.status(202).json({
+      jobId,
+      video: {
+        id: video.id,
+        title: video.title,
+        youtubeUrl: video.youtube_url
+      },
+      status: reusedJob?.status || "processing",
+      progress: reusedJob?.progress ?? 30,
+      stage: reusedJob?.stage || "manual transcript received",
       reused: Boolean(reusedJob),
       reuseScope,
       billing: {

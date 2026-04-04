@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { cancelJob, generateNotes } from "@/services/api";
+import { cancelJob, generateNotes, generateNotesFromTranscript } from "@/services/api";
 import { useJobStatus } from "@/hooks/useJobStatus";
 import { useRecentJobs } from "@/hooks/useRecentJobs";
 import { getDisplayNotes } from "@/lib/notes-format";
@@ -20,8 +20,15 @@ function isActiveJob(job) {
   return job?.status === "queued" || job?.status === "processing";
 }
 
+function isTranscriptFallbackError(message) {
+  const normalized = String(message || "").toLowerCase();
+  return normalized.includes("transcript not available");
+}
+
 export function GenerateForm({ billing, onRefreshBilling }) {
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualTranscript, setManualTranscript] = useState("");
   const [notes, setNotes] = useState("");
   const [notesJson, setNotesJson] = useState(null);
   const [videoId, setVideoId] = useState("");
@@ -32,6 +39,8 @@ export function GenerateForm({ billing, onRefreshBilling }) {
   const [copyLabel, setCopyLabel] = useState("Copy Notes");
   const [showHistory, setShowHistory] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  const [showManualFallback, setShowManualFallback] = useState(false);
 
   const history = useRecentJobs({ limit: 8, autoLoad: true });
   const jobStatus = useJobStatus({
@@ -66,6 +75,7 @@ export function GenerateForm({ billing, onRefreshBilling }) {
 
   const visibleJob = jobStatus.job || history.recentJob || null;
   const visibleJobError = normalizeJobErrorMessage(visibleJob?.error_message || "");
+  const canShowManualFallback = visibleJob?.status === "failed" && isTranscriptFallbackError(visibleJobError);
 
   useEffect(() => {
     if (history.error) {
@@ -78,6 +88,15 @@ export function GenerateForm({ billing, onRefreshBilling }) {
       setError(jobStatus.error);
     }
   }, [jobStatus.error]);
+
+  useEffect(() => {
+    if (canShowManualFallback) {
+      setShowManualFallback(true);
+      if (!manualTitle.trim()) {
+        setManualTitle(visibleJob?.video_title || title || "");
+      }
+    }
+  }, [canShowManualFallback, manualTitle, title, visibleJob?.video_title]);
 
   useEffect(() => {
     const currentJob = jobStatus.job;
@@ -137,6 +156,40 @@ export function GenerateForm({ billing, onRefreshBilling }) {
 
       setError(requestError.message);
       await onRefreshBilling?.();
+    }
+  }
+
+  async function handleManualTranscriptSubmit(event) {
+    event.preventDefault();
+
+    if (hasActiveJob || isSubmittingManual) {
+      setError("A notes job is already running. Please wait for it to finish.");
+      return;
+    }
+
+    if (notEnoughCredits) {
+      setError(`You need ${billing.noteGenerationCreditCost} credits to generate notes. Please top up first.`);
+      return;
+    }
+
+    setIsSubmittingManual(true);
+    setError("");
+
+    try {
+      const response = await generateNotesFromTranscript({
+        title: manualTitle,
+        transcript: manualTranscript
+      });
+      jobStatus.startTracking(response);
+      setTitle(response.video?.title || manualTitle || "Study Notes");
+      setShowManualFallback(false);
+      await history.refresh();
+      await onRefreshBilling?.();
+    } catch (requestError) {
+      setError(requestError.message);
+      await onRefreshBilling?.();
+    } finally {
+      setIsSubmittingManual(false);
     }
   }
 
@@ -224,6 +277,47 @@ export function GenerateForm({ billing, onRefreshBilling }) {
         </form>
       </section>
 
+      {showManualFallback ? (
+        <section className="surface-card p-5 md:p-6">
+          <form onSubmit={handleManualTranscriptSubmit} className="space-y-4">
+            <div>
+              <p className="section-kicker">Fallback</p>
+              <h3 className="mt-2 font-display text-3xl text-ink">Paste the transcript manually</h3>
+              <p className="mt-2 text-sm leading-7 text-stone-600">If YouTube captions are unavailable, paste the transcript here and we will generate notes from it directly.</p>
+            </div>
+
+            <input
+              className="w-full rounded-[1.2rem] border border-stone-300 bg-stone-50 px-4 py-3 text-sm outline-none transition focus:border-teal-700"
+              placeholder="Optional title for these notes"
+              value={manualTitle}
+              onChange={(event) => setManualTitle(event.target.value)}
+            />
+            <textarea
+              className="min-h-[220px] w-full rounded-[1.6rem] border border-stone-300 bg-stone-50 px-4 py-4 text-sm leading-7 outline-none transition focus:border-teal-700"
+              placeholder="Paste the transcript text here"
+              value={manualTranscript}
+              onChange={(event) => setManualTranscript(event.target.value)}
+            />
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={!manualTranscript.trim() || hasActiveJob || isSubmittingManual || notEnoughCredits}
+                className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSubmittingManual ? "Submitting..." : "Generate From Transcript"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowManualFallback(false)}
+                className="rounded-full border border-stone-300 bg-white px-5 py-3 text-sm transition hover:bg-stone-50"
+              >
+                Hide Fallback
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
+
       <section className="surface-card p-5 md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -266,7 +360,21 @@ export function GenerateForm({ billing, onRefreshBilling }) {
               {history.recentJob.processing_seconds ? <span>{history.recentJob.processing_seconds}s</span> : null}
             </div>
             {history.recentJob.status === "failed" && history.recentJob.error_message ? (
-              <p className="mt-3 text-sm leading-7 text-amber-800">{normalizeJobErrorMessage(history.recentJob.error_message)}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="text-sm leading-7 text-amber-800">{normalizeJobErrorMessage(history.recentJob.error_message)}</p>
+                {isTranscriptFallbackError(history.recentJob.error_message) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualTitle(history.recentJob.video_title || "");
+                      setShowManualFallback(true);
+                    }}
+                    className="rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-medium uppercase tracking-[0.16em] text-amber-800 transition hover:bg-amber-50"
+                  >
+                    Paste Transcript Instead
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : history.loading ? (

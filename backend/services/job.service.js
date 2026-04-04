@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { extractVideoId } from "../utils/youtube.js";
 import { JobStatus } from "../models/job-status.js";
 import {
@@ -36,6 +37,31 @@ function inferResumeStage(job) {
   }
 
   return "ingest";
+}
+
+function buildManualTranscriptItems(transcript) {
+  const words = String(transcript || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+
+  const chunkSize = 35;
+  const items = [];
+
+  for (let index = 0; index < words.length; index += chunkSize) {
+    const text = words.slice(index, index + chunkSize).join(" ").trim();
+    if (!text) continue;
+
+    items.push({
+      index: items.length,
+      text,
+      offset: items.length * 15000,
+      duration: 15000
+    });
+  }
+
+  return items;
 }
 
 async function requeuePipelineJob(existingJob, payload) {
@@ -211,6 +237,65 @@ export async function enqueueNotesJob(youtubeUrl, userId) {
       await enqueueIngestPipelineJob({
         ...queuePayload,
         jobId
+      });
+    } catch (error) {
+      await refundCreditsForNoteJob(jobId, "enqueue_failed");
+      throw error;
+    }
+
+    return {
+      jobId,
+      video,
+      reusedJob: null,
+      reuseScope: null,
+      creditsCharged: creditReservation.creditsCharged,
+      balanceAfter: creditReservation.balanceAfter
+    };
+  } catch (error) {
+    await deleteNoteJob(jobId).catch(() => {});
+    throw error;
+  }
+}
+
+export async function enqueueManualTranscriptNotesJob({ title, transcript, userId }) {
+  const cleanedTranscript = String(transcript || "").replace(/\s+/g, " ").trim();
+  const transcriptItems = buildManualTranscriptItems(cleanedTranscript);
+  const manualId = randomUUID();
+  const youtubeUrl = `manual://transcript/${manualId}`;
+  const youtubeVideoId = `manual-${manualId.slice(0, 8)}`;
+  const resolvedTitle = String(title || "").trim() || `Study Notes for ${youtubeVideoId}`;
+  const startedAt = Date.now();
+
+  const video = await upsertVideo({
+    youtubeUrl,
+    videoId: youtubeVideoId,
+    title: resolvedTitle,
+    transcript: cleanedTranscript,
+    transcriptItems,
+    cleanedTranscript,
+    durationSeconds: Math.max(30, transcriptItems.length * 15)
+  });
+
+  const jobId = await createNoteJob(video.id, userId);
+
+  try {
+    const creditReservation = await reserveCreditsForNotesJob({ userId, jobId, youtubeUrl });
+
+    try {
+      await updateNoteJob(jobId, {
+        status: JobStatus.PROCESSING,
+        progress: 30,
+        stage: "manual transcript received"
+      });
+
+      await enqueueEmbeddingPipelineJob({
+        jobId,
+        videoId: video.id,
+        youtubeUrl,
+        youtubeVideoId,
+        userId,
+        title: resolvedTitle,
+        startedAt
       });
     } catch (error) {
       await refundCreditsForNoteJob(jobId, "enqueue_failed");
