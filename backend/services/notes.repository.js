@@ -162,7 +162,7 @@ export async function listRecentNoteJobs(userId, options = {}) {
   values.push(limit + 1);
 
   const result = await query(
-    `SELECT nj.id, nj.status, nj.progress, nj.stage, nj.generation_provider, nj.processing_seconds,
+    `SELECT nj.id, nj.status, nj.progress, nj.stage, nj.error_message, nj.generation_provider, nj.processing_seconds,
             nj.created_at, nj.updated_at, nj.video_id, nj.notes_markdown,
             v.title AS video_title, v.youtube_url, v.youtube_video_id
      FROM note_jobs nj
@@ -192,3 +192,4 @@ export async function saveQuestionLog(userId, videoId, question, answerMarkdown)
     [userId, videoId, question, answerMarkdown]
   );
 }
+

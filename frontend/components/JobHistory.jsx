@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeJobErrorMessage } from "@/lib/job-errors";
+
 function formatAge(dateString) {
   const date = new Date(dateString);
   return date.toLocaleString();
@@ -26,6 +28,9 @@ export function JobHistory({ jobs, activeJobId, onSelect, hasMore = false, loadi
             {job.generation_provider ? <span>{job.generation_provider}</span> : null}
             {job.processing_seconds ? <span>{job.processing_seconds}s</span> : null}
           </div>
+          {job.status === "failed" && job.error_message ? (
+            <p className="mt-3 text-sm leading-7 text-amber-800">{normalizeJobErrorMessage(job.error_message)}</p>
+          ) : null}
         </button>
       ))}
 

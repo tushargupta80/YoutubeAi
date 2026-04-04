@@ -5,6 +5,7 @@ import { refundCreditsForNoteJob } from "../../backend/services/billing.service.
 import { JobStatus } from "../../backend/models/job-status.js";
 import { extractVideoArtifacts } from "../../backend/services/rag.service.js";
 import { isJobCancelledError, markJobCancelled, throwIfJobCancelled } from "../../backend/services/job-cancellation.js";
+import { normalizeJobErrorMessage } from "../../backend/utils/job-errors.js";
 
 export async function handleExtractTranscript(job) {
   const { jobId, youtubeUrl, youtubeVideoId, userId, startedAt } = job.data;
@@ -68,7 +69,7 @@ export async function handleExtractTranscript(job) {
     await updateNoteJob(jobId, {
       status: JobStatus.FAILED,
       stage: "failed",
-      error_message: error.message,
+      error_message: normalizeJobErrorMessage(error.message),
       progress: 100
     });
     await refundCreditsForNoteJob(jobId, "ingest_failed");

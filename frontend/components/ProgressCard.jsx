@@ -1,7 +1,8 @@
-export function ProgressCard({ status, stage, progress, onCancel, isCancelling = false }) {
+export function ProgressCard({ status, stage, progress, errorMessage, onCancel, isCancelling = false }) {
   const normalizedProgress = Math.max(0, Math.min(progress || 0, 100));
   const isIdle = !status;
   const canCancel = status === "queued" || status === "processing";
+  const hasFailureMessage = status === "failed" && errorMessage;
 
   return (
     <section className="surface-card p-5 md:p-6">
@@ -27,6 +28,12 @@ export function ProgressCard({ status, stage, progress, onCancel, isCancelling =
           </div>
         </div>
       </div>
+
+      {hasFailureMessage ? (
+        <div className="mt-4 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-900">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <div className="mt-5 h-3 overflow-hidden rounded-full bg-stone-200">
         <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${normalizedProgress}%` }} />

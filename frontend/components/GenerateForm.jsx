@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { cancelJob, generateNotes } from "@/services/api";
 import { useJobStatus } from "@/hooks/useJobStatus";
 import { useRecentJobs } from "@/hooks/useRecentJobs";
 import { getDisplayNotes } from "@/lib/notes-format";
+import { normalizeJobErrorMessage } from "@/lib/job-errors";
 import { ProgressCard } from "@/components/ProgressCard";
 import { NotesViewer } from "@/components/NotesViewer";
 import { QuestionBox } from "@/components/QuestionBox";
@@ -62,6 +63,9 @@ export function GenerateForm({ billing, onRefreshBilling }) {
 
     return null;
   }, [history.recentJob, jobStatus.job]);
+
+  const visibleJob = jobStatus.job || history.recentJob || null;
+  const visibleJobError = normalizeJobErrorMessage(visibleJob?.error_message || "");
 
   useEffect(() => {
     if (history.error) {
@@ -261,6 +265,9 @@ export function GenerateForm({ billing, onRefreshBilling }) {
               {history.recentJob.generation_provider ? <span>{history.recentJob.generation_provider}</span> : null}
               {history.recentJob.processing_seconds ? <span>{history.recentJob.processing_seconds}s</span> : null}
             </div>
+            {history.recentJob.status === "failed" && history.recentJob.error_message ? (
+              <p className="mt-3 text-sm leading-7 text-amber-800">{normalizeJobErrorMessage(history.recentJob.error_message)}</p>
+            ) : null}
           </div>
         ) : history.loading ? (
           <p className="mt-5 text-sm text-stone-600">Loading recent generations...</p>
@@ -286,6 +293,7 @@ export function GenerateForm({ billing, onRefreshBilling }) {
         status={jobStatus.job?.status}
         stage={jobStatus.job?.stage}
         progress={jobStatus.job?.progress}
+        errorMessage={visibleJobError}
         onCancel={cancellableJob ? () => handleCancelJob(cancellableJob) : null}
         isCancelling={isCancelling}
       />
