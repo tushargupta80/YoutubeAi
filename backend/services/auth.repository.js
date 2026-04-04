@@ -34,6 +34,37 @@ export async function getUserById(id) {
   return result.rows[0] || null;
 }
 
+export async function getUserAuthById(id) {
+  const result = await query(
+    `SELECT id, email, name, role, session_version, created_at, password_hash FROM users WHERE id = $1`,
+    [id]
+  );
+  return result.rows[0] || null;
+}
+
+export async function updateUserProfile(id, { name }) {
+  const normalizedName = String(name || "").trim();
+  const result = await query(
+    `UPDATE users
+     SET name = $2
+     WHERE id = $1
+     RETURNING id, email, name, role, session_version, created_at`,
+    [id, normalizedName || null]
+  );
+  return result.rows[0] || null;
+}
+
+export async function updateUserPasswordHash(id, passwordHash) {
+  const result = await query(
+    `UPDATE users
+     SET password_hash = $2
+     WHERE id = $1
+     RETURNING id`,
+    [id, passwordHash]
+  );
+  return result.rows[0] || null;
+}
+
 export async function getUserSessionVersionById(id) {
   const result = await query(
     `SELECT session_version FROM users WHERE id = $1`,

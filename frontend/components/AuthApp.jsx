@@ -1,12 +1,172 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GenerateForm } from "@/components/GenerateForm";
 import { RuntimeSettingsCard } from "@/components/RuntimeSettingsCard";
 import { AdminOverview } from "@/components/AdminOverview";
 import { AuthPanel } from "@/components/AuthPanel";
 import { formatDateTime, joinWithDot } from "@/lib/display-format";
 import { useWorkspaceSession } from "@/hooks/useWorkspaceSession";
+
+function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, passwordSaving }) {
+  const [displayName, setDisplayName] = useState(user?.name || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+
+  useEffect(() => {
+    setDisplayName(user?.name || "");
+  }, [user?.name]);
+
+  async function handleProfileSubmit(event) {
+    event.preventDefault();
+    setProfileError("");
+    setProfileSuccess("");
+
+    const nextName = String(displayName || "").trim();
+    if (!nextName) {
+      setProfileError("Please enter a username to display on your account.");
+      return;
+    }
+
+    try {
+      const response = await onUpdateProfile(nextName);
+      setProfileSuccess(response?.message || "Profile updated successfully.");
+    } catch (requestError) {
+      setProfileError(requestError.message);
+    }
+  }
+
+  async function handlePasswordSubmit(event) {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      const response = await onChangePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordSuccess(response?.message || "Password updated successfully.");
+    } catch (requestError) {
+      setPasswordError(requestError.message);
+    }
+  }
+
+  return (
+    <section className="surface-card space-y-6 p-6 md:p-7">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="section-kicker">Profile</p>
+          <h3 className="mt-2 font-display text-3xl text-ink">Account settings</h3>
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-600">Update the name shown across your workspace, keep your password fresh, and review your core account details in one place.</p>
+        </div>
+        <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 px-5 py-4 text-sm text-stone-600">
+          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Account summary</p>
+          <p className="mt-2 font-medium text-ink">{user.name || "No username set yet"}</p>
+          <p className="mt-1">{user.email}</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-stone-500">Role: {user.role || "user"}</p>
+          <p className="mt-2 text-xs text-stone-500">Member since {formatDateTime(user.created_at)}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <article className="rounded-[1.6rem] border border-stone-200 bg-white p-5">
+          <div>
+            <p className="text-sm font-medium text-ink">Public profile</p>
+            <p className="mt-1 text-xs text-stone-500">This username appears in your workspace and billing details.</p>
+          </div>
+          <form className="mt-5 space-y-4" onSubmit={handleProfileSubmit}>
+            <label className="block text-sm text-stone-700">
+              <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-stone-500">Username</span>
+              <input
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                maxLength={80}
+                className="w-full rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
+                placeholder="Enter your display name"
+              />
+            </label>
+            <div className="rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-xs text-stone-500">
+              Email address is currently fixed to protect billing history and session identity.
+            </div>
+            {profileError ? <p className="text-sm text-red-700">{profileError}</p> : null}
+            {profileSuccess ? <p className="text-sm text-emerald-700">{profileSuccess}</p> : null}
+            <button
+              type="submit"
+              disabled={profileSaving}
+              className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {profileSaving ? "Saving profile..." : "Save profile"}
+            </button>
+          </form>
+        </article>
+
+        <article className="rounded-[1.6rem] border border-stone-200 bg-white p-5">
+          <div>
+            <p className="text-sm font-medium text-ink">Password & security</p>
+            <p className="mt-1 text-xs text-stone-500">Changing your password will sign out your other saved sessions automatically.</p>
+          </div>
+          <form className="mt-5 space-y-4" onSubmit={handlePasswordSubmit}>
+            <label className="block text-sm text-stone-700">
+              <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-stone-500">Current password</span>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                className="w-full rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
+                placeholder="Enter current password"
+              />
+            </label>
+            <label className="block text-sm text-stone-700">
+              <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-stone-500">New password</span>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                className="w-full rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
+                placeholder="At least 8 characters"
+              />
+            </label>
+            <label className="block text-sm text-stone-700">
+              <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-stone-500">Confirm new password</span>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="w-full rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
+                placeholder="Re-enter new password"
+              />
+            </label>
+            {passwordError ? <p className="text-sm text-red-700">{passwordError}</p> : null}
+            {passwordSuccess ? <p className="text-sm text-emerald-700">{passwordSuccess}</p> : null}
+            <button
+              type="submit"
+              disabled={passwordSaving}
+              className="inline-flex items-center justify-center rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-medium text-ink transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {passwordSaving ? "Updating password..." : "Change password"}
+            </button>
+          </form>
+        </article>
+      </div>
+    </section>
+  );
+}
 
 function SessionPanel({ sessions, onRevoke, onLogoutAll, sessionRevokingId, loggingOutAll }) {
   const [showSessions, setShowSessions] = useState(false);
@@ -183,6 +343,8 @@ export function AuthApp() {
     authenticate,
     logout,
     logoutAll,
+    updateProfile,
+    changePassword,
     refreshBilling,
     purchasePlan,
     loadMoreUsers,
@@ -201,7 +363,9 @@ export function AuthApp() {
     sessionRevokingId,
     deadLetterReplayingId,
     loggingOutAll,
-    purchasingPlanId
+    purchasingPlanId,
+    profileSaving,
+    passwordSaving
   } = useWorkspaceSession();
 
   async function handleSubmit(event) {
@@ -260,6 +424,14 @@ export function AuthApp() {
       </section>
 
       {error ? <div className="surface-card border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div> : null}
+
+      <ProfilePanel
+        user={user}
+        onUpdateProfile={updateProfile}
+        onChangePassword={changePassword}
+        profileSaving={profileSaving}
+        passwordSaving={passwordSaving}
+      />
 
       <BillingPanel
         billing={billing}

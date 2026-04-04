@@ -3,6 +3,7 @@ import {
   adminCancelJob,
   adminReplayDeadLetter,
   adminRevokeSession,
+  changePassword as changePasswordRequest,
   createBillingCheckout,
   getAdminOverview,
   getBillingSummary,
@@ -12,6 +13,7 @@ import {
   logoutAll as logoutAllRequest,
   register,
   revokeMySession,
+  updateProfile as updateProfileRequest,
   updateUserRole,
   verifyBillingPayment
 } from "@/services/api";
@@ -68,6 +70,8 @@ export function useWorkspaceSession() {
   const [deadLetterReplayingId, setDeadLetterReplayingId] = useState("");
   const [loggingOutAll, setLoggingOutAll] = useState(false);
   const [purchasingPlanId, setPurchasingPlanId] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const clearWorkspace = useCallback(() => {
     setUser(null);
@@ -165,6 +169,32 @@ export function useWorkspaceSession() {
       setLoggingOutAll(false);
     }
   }, [clearWorkspace]);
+
+  const updateProfile = useCallback(async (name) => {
+    setProfileSaving(true);
+    setError("");
+    try {
+      const response = await updateProfileRequest(name);
+      setUser(response.user || null);
+      await loadWorkspace();
+      return response;
+    } finally {
+      setProfileSaving(false);
+    }
+  }, [loadWorkspace]);
+
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    setPasswordSaving(true);
+    setError("");
+    try {
+      const response = await changePasswordRequest(currentPassword, newPassword);
+      setUser(response.user || null);
+      await loadWorkspace();
+      return response;
+    } finally {
+      setPasswordSaving(false);
+    }
+  }, [loadWorkspace]);
 
   const purchasePlan = useCallback(async (planId) => {
     if (!planId || purchasingPlanId) return null;
@@ -370,6 +400,8 @@ export function useWorkspaceSession() {
     authenticate,
     logout,
     logoutAll,
+    updateProfile,
+    changePassword,
     refreshBilling,
     purchasePlan,
     loadMoreUsers,
@@ -388,6 +420,8 @@ export function useWorkspaceSession() {
     sessionRevokingId,
     deadLetterReplayingId,
     loggingOutAll,
-    purchasingPlanId
+    purchasingPlanId,
+    profileSaving,
+    passwordSaving
   };
 }

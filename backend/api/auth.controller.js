@@ -2,6 +2,7 @@ import {
   createRefreshSession,
   createUser,
   getRefreshSessionByTokenHash,
+  getUserAuthById,
   getUserByEmail,
   getUserById,
   incrementUserSessionVersion,
@@ -9,7 +10,9 @@ import {
   revokeAllRefreshSessionsForUser,
   revokeRefreshSessionById,
   revokeRefreshSessionByTokenHash,
-  rotateRefreshSession
+  rotateRefreshSession,
+  updateUserPasswordHash,
+  updateUserProfile
 } from "../services/auth.repository.js";
 import { getBillingSummary, grantStarterCredits } from "../services/billing.service.js";
 import { getAdminOverview } from "../services/admin.repository.js";
@@ -63,7 +66,8 @@ function buildSessionUser(user) {
     id: user.id,
     email: user.email,
     name: user.name,
-    role: user.role || "user"
+    role: user.role || "user",
+    created_at: user.created_at
   };
 }
 
@@ -259,7 +263,83 @@ export async function me(req, res, next) {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    return res.json({ user });
+    return res.json({ user: buildSessionUser(user) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function updateProfile(req, res, next) {
+  try {
+    const nextName = String(req.body?.name || "").trim();
+    if (!nextName) {
+      return res.status(400).json({ error: "Name is required" });
+    }
+
+    if (nextName.length > 80) {
+      return res.status(400).json({ error: "Name must be 80 characters or fewer" });
+    }
+
+    const user = await updateUserProfile(req.user.sub, { name: nextName });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const refreshToken = getCookieToken(req, env.authRefreshCookieName);
+    const currentTokenHash = refreshToken ? hashOpaqueToken(refreshToken) : "";
+    const currentSession = currentTokenHash ? await getRefreshSessionByTokenHash(currentTokenHash) : null;
+    const session = await issueSession(user, req, currentSession?.id || "");
+    setSessionCookies(res, session.accessToken, session.refreshToken);
+
+    return res.json({
+      ok: true,
+      message: "Profile updated successfully.",
+      user: buildSessionUser(user)
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function changePassword(req, res, next) {
+  try {
+    const currentPassword = String(req.body?.currentPassword || "");
+    const nextPassword = String(req.body?.newPassword || "");
+
+    if (!currentPassword || !nextPassword) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+
+    if (nextPassword.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters" });
+    }
+
+    const user = await getUserAuthById(req.user.sub);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!verifyPassword(currentPassword, user.password_hash)) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    if (verifyPassword(nextPassword, user.password_hash)) {
+      return res.status(400).json({ error: "New password must be different from your current password" });
+    }
+
+    await updateUserPasswordHash(user.id, hashPassword(nextPassword));
+    await revokeAllRefreshSessionsForUser(user.id);
+    await incrementUserSessionVersion(user.id);
+
+    const refreshedUser = await getUserById(user.id);
+    const session = await issueSession(refreshedUser, req);
+    setSessionCookies(res, session.accessToken, session.refreshToken);
+
+    return res.json({
+      ok: true,
+      message: "Password updated successfully. Other sessions were signed out.",
+      user: buildSessionUser(refreshedUser)
+    });
   } catch (error) {
     return next(error);
   }

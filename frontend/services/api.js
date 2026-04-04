@@ -179,6 +179,21 @@ export function getWorkspaceBootstrap() {
   return request("/auth/bootstrap");
 }
 
+export function updateProfile(name) {
+  return request("/auth/profile", {
+    method: "PATCH",
+    body: JSON.stringify({ name })
+  });
+}
+
+export function changePassword(currentPassword, newPassword) {
+  return request("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+    timeoutMs: 45000
+  });
+}
+
 export function getMySessions() {
   return request("/auth/sessions");
 }
