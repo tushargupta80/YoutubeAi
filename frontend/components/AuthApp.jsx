@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GenerateForm } from "@/components/GenerateForm";
 import { RuntimeSettingsCard } from "@/components/RuntimeSettingsCard";
 import { AdminOverview } from "@/components/AdminOverview";
@@ -8,8 +8,95 @@ import { AuthPanel } from "@/components/AuthPanel";
 import { formatDateTime, joinWithDot } from "@/lib/display-format";
 import { useWorkspaceSession } from "@/hooks/useWorkspaceSession";
 
-function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, passwordSaving }) {
+const MAX_AVATAR_DIMENSION = 512;
+const AVATAR_OUTPUT_QUALITY = 0.82;
+
+function getUserInitials(user) {
+  const source = String(user?.name || user?.email || "U").trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (!parts.length) return "U";
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
+function ProfileStat({ label, value, tone = "default" }) {
+  const toneClass = tone === "accent"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+    : "border-stone-200 bg-white text-ink";
+
+  return (
+    <div className={`rounded-[1.2rem] border px-4 py-3 ${toneClass}`}>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-stone-500">{label}</p>
+      <p className="mt-2 text-lg font-medium">{value}</p>
+    </div>
+  );
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to process the selected image."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function canvasToDataUrl(canvas, type, quality) {
+  return canvas.toDataURL(type, quality);
+}
+
+async function optimizeAvatarFile(file) {
+  const image = await loadImageElement(file);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scale = Math.min(1, MAX_AVATAR_DIMENSION / Math.max(sourceWidth, sourceHeight));
+  const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Image processing is not supported in this browser.");
+  }
+
+  context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+  const preferredType = file.type === "image/png" ? "image/png" : "image/webp";
+  let dataUrl = canvasToDataUrl(canvas, preferredType, AVATAR_OUTPUT_QUALITY);
+
+  if (dataUrl.length > 1_500_000) {
+    dataUrl = canvasToDataUrl(canvas, "image/jpeg", 0.72);
+  }
+
+  return dataUrl;
+}
+
+function ProfilePanel({
+  user,
+  billing,
+  sessions,
+  recentJobs,
+  onUpdateProfile,
+  onChangePassword,
+  profileSaving,
+  passwordSaving
+}) {
   const [displayName, setDisplayName] = useState(user?.name || "");
+  const [avatarPreview, setAvatarPreview] = useState(user?.avatar_url || "");
+  const [pendingAvatarDataUrl, setPendingAvatarDataUrl] = useState(undefined);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,10 +104,51 @@ function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, 
   const [profileSuccess, setProfileSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setDisplayName(user?.name || "");
-  }, [user?.name]);
+    setAvatarPreview(user?.avatar_url || "");
+    setPendingAvatarDataUrl(undefined);
+    setRemoveAvatar(false);
+  }, [user?.name, user?.avatar_url]);
+
+  const initials = useMemo(() => getUserInitials(user), [user]);
+  const recentJobCount = recentJobs?.jobs?.length || 0;
+  const currentSessionCount = sessions?.filter((session) => !session.revoked_at).length || 0;
+
+  async function handleAvatarChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setProfileError("");
+    setProfileSuccess("");
+
+    if (!file.type.startsWith("image/")) {
+      setProfileError("Please choose a valid image file.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const dataUrl = await optimizeAvatarFile(file);
+      setAvatarPreview(dataUrl);
+      setPendingAvatarDataUrl(dataUrl);
+      setRemoveAvatar(false);
+    } catch (fileError) {
+      setProfileError(fileError.message);
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function handleRemoveAvatar() {
+    setAvatarPreview("");
+    setPendingAvatarDataUrl("");
+    setRemoveAvatar(true);
+    setProfileError("");
+    setProfileSuccess("");
+  }
 
   async function handleProfileSubmit(event) {
     event.preventDefault();
@@ -34,8 +162,14 @@ function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, 
     }
 
     try {
-      const response = await onUpdateProfile(nextName);
+      const response = await onUpdateProfile({
+        name: nextName,
+        avatarUrl: pendingAvatarDataUrl,
+        removeAvatar
+      });
       setProfileSuccess(response?.message || "Profile updated successfully.");
+      setPendingAvatarDataUrl(undefined);
+      setRemoveAvatar(false);
     } catch (requestError) {
       setProfileError(requestError.message);
     }
@@ -69,18 +203,60 @@ function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, 
 
   return (
     <section className="surface-card space-y-6 p-6 md:p-7">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="section-kicker">Profile</p>
-          <h3 className="mt-2 font-display text-3xl text-ink">Account settings</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-stone-600">Update the name shown across your workspace, keep your password fresh, and review your core account details in one place.</p>
+      <div className="grid gap-4 xl:grid-cols-[1.3fr_0.9fr]">
+        <div className="rounded-[1.8rem] border border-stone-200 bg-gradient-to-br from-white via-stone-50 to-emerald-50 p-5 md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={`${user?.name || user?.email || "User"} profile`}
+                  className="h-16 w-16 rounded-[1.4rem] object-cover shadow-sm"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-ink font-display text-2xl text-white shadow-sm">
+                  {initials}
+                </div>
+              )}
+              <div>
+                <p className="section-kicker">Profile</p>
+                <h3 className="mt-2 font-display text-3xl text-ink">Account settings</h3>
+                <p className="mt-2 text-sm text-stone-600">Manage how your workspace identifies you and how your account stays secure.</p>
+              </div>
+            </div>
+            <span className="rounded-full border border-stone-200 bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-500">
+              {user.role || "user"}
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <ProfileStat label="Available Credits" value={billing?.balance ?? 0} tone="accent" />
+            <ProfileStat label="Active Sessions" value={currentSessionCount} />
+            <ProfileStat label="Recent Requests" value={recentJobCount} />
+          </div>
+
+          <div className="mt-5 rounded-[1.3rem] border border-stone-200 bg-white/80 px-4 py-4 text-sm text-stone-600">
+            <p className="font-medium text-ink">Account summary</p>
+            <p className="mt-2">{user.name || "No username set yet"}</p>
+            <p className="mt-1">{user.email}</p>
+            <p className="mt-2 text-xs text-stone-500">Member since {formatDateTime(user.created_at)}</p>
+          </div>
         </div>
-        <div className="rounded-[1.5rem] border border-stone-200 bg-stone-50 px-5 py-4 text-sm text-stone-600">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Account summary</p>
-          <p className="mt-2 font-medium text-ink">{user.name || "No username set yet"}</p>
-          <p className="mt-1">{user.email}</p>
-          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-stone-500">Role: {user.role || "user"}</p>
-          <p className="mt-2 text-xs text-stone-500">Member since {formatDateTime(user.created_at)}</p>
+
+        <div className="rounded-[1.8rem] border border-stone-200 bg-white p-5 md:p-6">
+          <p className="section-kicker">Security Notes</p>
+          <h4 className="mt-2 font-display text-2xl text-ink">Good account hygiene</h4>
+          <div className="mt-4 space-y-3 text-sm text-stone-600">
+            <div className="rounded-[1.2rem] border border-stone-200 bg-stone-50 px-4 py-3">
+              Use a unique password you do not reuse on other sites.
+            </div>
+            <div className="rounded-[1.2rem] border border-stone-200 bg-stone-50 px-4 py-3">
+              Password changes sign out your other saved sessions automatically.
+            </div>
+            <div className="rounded-[1.2rem] border border-stone-200 bg-stone-50 px-4 py-3">
+              Revoke unknown sessions below if you ever notice suspicious activity.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -91,6 +267,51 @@ function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, 
             <p className="mt-1 text-xs text-stone-500">This username appears in your workspace and billing details.</p>
           </div>
           <form className="mt-5 space-y-4" onSubmit={handleProfileSubmit}>
+            <div className="rounded-[1.3rem] border border-stone-200 bg-stone-50 px-4 py-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt="Profile preview"
+                    className="h-20 w-20 rounded-[1.5rem] object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-ink font-display text-3xl text-white">
+                    {initials}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-ink">Profile photo</p>
+                  <p className="text-xs text-stone-500">PNG, JPG, WEBP, or GIF. Large photos are resized automatically before upload.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-100"
+                    >
+                      Upload photo
+                    </button>
+                    {avatarPreview ? (
+                      <button
+                        type="button"
+                        onClick={handleRemoveAvatar}
+                        className="rounded-full border border-red-300 bg-white px-4 py-2 text-sm text-red-700 transition hover:bg-red-50"
+                      >
+                        Remove photo
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                </div>
+              </div>
+            </div>
+
             <label className="block text-sm text-stone-700">
               <span className="mb-2 block text-xs uppercase tracking-[0.16em] text-stone-500">Username</span>
               <input
@@ -100,6 +321,9 @@ function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, 
                 className="w-full rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
                 placeholder="Enter your display name"
               />
+              <span className="mt-2 block text-right text-[11px] uppercase tracking-[0.14em] text-stone-400">
+                {String(displayName || "").trim().length}/80
+              </span>
             </label>
             <div className="rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-xs text-stone-500">
               Email address is currently fixed to protect billing history and session identity.
@@ -152,6 +376,9 @@ function ProfilePanel({ user, onUpdateProfile, onChangePassword, profileSaving, 
                 placeholder="Re-enter new password"
               />
             </label>
+            <div className="rounded-[1.1rem] border border-stone-200 bg-stone-50 px-4 py-3 text-xs text-stone-500">
+              Use 8+ characters and avoid reusing old passwords from other apps.
+            </div>
             {passwordError ? <p className="text-sm text-red-700">{passwordError}</p> : null}
             {passwordSuccess ? <p className="text-sm text-emerald-700">{passwordSuccess}</p> : null}
             <button
@@ -414,11 +641,20 @@ export function AuthApp() {
   return (
     <div className="space-y-6">
       <section className="surface-card flex flex-wrap items-center justify-between gap-4 px-6 py-5">
-        <div>
-          <p className="section-kicker">Workspace</p>
-          <h2 className="mt-1 font-display text-3xl text-ink">Welcome back</h2>
-          <p className="mt-1 text-sm text-stone-700">Signed in as {user.name || user.email}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-stone-500">Role: {user.role || "user"}</p>
+        <div className="flex items-center gap-3">
+          {user.avatar_url ? (
+            <img src={user.avatar_url} alt={`${user.name || user.email} avatar`} className="h-12 w-12 rounded-[1rem] object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-ink font-display text-lg text-white">
+              {getUserInitials(user)}
+            </div>
+          )}
+          <div>
+            <p className="section-kicker">Workspace</p>
+            <h2 className="mt-1 font-display text-3xl text-ink">Welcome back</h2>
+            <p className="mt-1 text-sm text-stone-700">Signed in as {user.name || user.email}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-stone-500">Role: {user.role || "user"}</p>
+          </div>
         </div>
         <button className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-50" onClick={logout}>Logout</button>
       </section>
@@ -427,6 +663,9 @@ export function AuthApp() {
 
       <ProfilePanel
         user={user}
+        billing={billing}
+        sessions={sessions}
+        recentJobs={recentJobsBootstrap}
         onUpdateProfile={updateProfile}
         onChangePassword={changePassword}
         profileSaving={profileSaving}

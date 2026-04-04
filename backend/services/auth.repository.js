@@ -12,7 +12,7 @@ export async function createUser({ email, passwordHash, name }) {
   const result = await query(
     `INSERT INTO users (email, password_hash, name, role)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, email, name, role, session_version, created_at`,
+     RETURNING id, email, name, avatar_url, role, session_version, created_at`,
     [normalizedEmail, passwordHash, name || null, role]
   );
   return result.rows[0];
@@ -28,7 +28,7 @@ export async function getUserByEmail(email) {
 
 export async function getUserById(id) {
   const result = await query(
-    `SELECT id, email, name, role, session_version, created_at FROM users WHERE id = $1`,
+    `SELECT id, email, name, avatar_url, role, session_version, created_at FROM users WHERE id = $1`,
     [id]
   );
   return result.rows[0] || null;
@@ -36,20 +36,30 @@ export async function getUserById(id) {
 
 export async function getUserAuthById(id) {
   const result = await query(
-    `SELECT id, email, name, role, session_version, created_at, password_hash FROM users WHERE id = $1`,
+    `SELECT id, email, name, avatar_url, role, session_version, created_at, password_hash FROM users WHERE id = $1`,
     [id]
   );
   return result.rows[0] || null;
 }
 
-export async function updateUserProfile(id, { name }) {
+export async function updateUserProfile(id, { name, avatarUrl }) {
   const normalizedName = String(name || "").trim();
+  const nextAvatarUrl = avatarUrl === undefined ? undefined : avatarUrl || null;
+  const values = [id, normalizedName || null];
+  let avatarAssignment = "avatar_url = avatar_url";
+
+  if (nextAvatarUrl !== undefined) {
+    values.push(nextAvatarUrl);
+    avatarAssignment = `avatar_url = $${values.length}`;
+  }
+
   const result = await query(
     `UPDATE users
-     SET name = $2
+     SET name = $2,
+         ${avatarAssignment}
      WHERE id = $1
-     RETURNING id, email, name, role, session_version, created_at`,
-    [id, normalizedName || null]
+     RETURNING id, email, name, avatar_url, role, session_version, created_at`,
+    values
   );
   return result.rows[0] || null;
 }
@@ -109,6 +119,7 @@ export async function getRefreshSessionByTokenHash(tokenHash) {
        s.ip_address,
        u.email,
        u.name,
+       u.avatar_url,
        u.role,
        u.session_version
      FROM user_refresh_sessions s

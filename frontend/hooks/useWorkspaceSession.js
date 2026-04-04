@@ -170,11 +170,11 @@ export function useWorkspaceSession() {
     }
   }, [clearWorkspace]);
 
-  const updateProfile = useCallback(async (name) => {
+  const updateProfile = useCallback(async ({ name, avatarUrl, removeAvatar = false }) => {
     setProfileSaving(true);
     setError("");
     try {
-      const response = await updateProfileRequest(name);
+      const response = await updateProfileRequest({ name, avatarUrl, removeAvatar });
       setUser(response.user || null);
       await loadWorkspace();
       return response;

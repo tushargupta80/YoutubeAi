@@ -22,6 +22,9 @@ import { env } from "../config/env.js";
 import { getCookieToken } from "../middleware/auth.js";
 import { createOpaqueToken, hashOpaqueToken, hashPassword, signToken, verifyPassword } from "../utils/auth.js";
 
+const DATA_URL_PATTERN = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[a-zA-Z0-9+/=]+$/;
+const MAX_AVATAR_LENGTH = 1_500_000;
+
 function buildAccessTokenPayload(user) {
   return {
     sub: user.id,
@@ -66,6 +69,7 @@ function buildSessionUser(user) {
     id: user.id,
     email: user.email,
     name: user.name,
+    avatar_url: user.avatar_url || "",
     role: user.role || "user",
     created_at: user.created_at
   };
@@ -73,6 +77,20 @@ function buildSessionUser(user) {
 
 function buildAuthResponse(user) {
   return { user: buildSessionUser(user) };
+}
+
+function normalizeAvatarInput(avatarUrl, removeAvatar) {
+  if (removeAvatar) return "";
+  if (avatarUrl === undefined) return undefined;
+  const trimmed = String(avatarUrl || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.length > MAX_AVATAR_LENGTH) {
+    throw new Error("Profile photo is too large. Please choose a smaller image.");
+  }
+  if (!DATA_URL_PATTERN.test(trimmed)) {
+    throw new Error("Profile photo must be a PNG, JPG, WEBP, or GIF image.");
+  }
+  return trimmed;
 }
 
 async function buildWorkspaceBootstrapPayload(user, req) {
@@ -280,7 +298,14 @@ export async function updateProfile(req, res, next) {
       return res.status(400).json({ error: "Name must be 80 characters or fewer" });
     }
 
-    const user = await updateUserProfile(req.user.sub, { name: nextName });
+    let nextAvatarUrl;
+    try {
+      nextAvatarUrl = normalizeAvatarInput(req.body?.avatarUrl, req.body?.removeAvatar === true);
+    } catch (avatarError) {
+      return res.status(400).json({ error: avatarError.message });
+    }
+
+    const user = await updateUserProfile(req.user.sub, { name: nextName, avatarUrl: nextAvatarUrl });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }

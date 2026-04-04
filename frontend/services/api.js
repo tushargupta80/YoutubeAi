@@ -179,10 +179,10 @@ export function getWorkspaceBootstrap() {
   return request("/auth/bootstrap");
 }
 
-export function updateProfile(name) {
+export function updateProfile({ name, avatarUrl, removeAvatar = false }) {
   return request("/auth/profile", {
     method: "PATCH",
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name, avatarUrl, removeAvatar })
   });
 }
 
