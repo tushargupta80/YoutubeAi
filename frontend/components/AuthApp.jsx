@@ -414,6 +414,7 @@ function ProfilePanel({
           </form>
         </article>
         </div>
+      </div>
       </section>
     </div>
   );
