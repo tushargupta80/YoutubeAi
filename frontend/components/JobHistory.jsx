@@ -7,22 +7,46 @@ function formatAge(dateString) {
   return date.toLocaleString();
 }
 
-export function JobHistory({ jobs, activeJobId, onSelect, hasMore = false, loadingMore = false, onLoadMore }) {
+export function JobHistory({
+  jobs,
+  activeJobId,
+  deletingJobId = "",
+  onDelete,
+  onSelect,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore
+}) {
   return (
     <div className="space-y-3">
       {jobs.length === 0 ? <p className="text-sm text-stone-600">No generations yet.</p> : null}
       {jobs.map((job) => (
-        <button
+        <article
           key={job.id}
-          onClick={() => onSelect(job)}
           className={`w-full rounded-[1.6rem] border px-4 py-4 text-left transition ${activeJobId === job.id ? "border-ink bg-stone-100" : "border-stone-200 bg-stone-50 hover:bg-white"}`}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+            <button
+              type="button"
+              onClick={() => onSelect(job)}
+              className="min-w-0 flex-1 text-left"
+            >
               <p className="line-clamp-2 text-sm font-medium leading-6 text-stone-800">{job.video_title || job.youtube_video_id || "Untitled video"}</p>
               <p className="mt-1 text-xs text-stone-500">{formatAge(job.created_at)}</p>
+            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {onDelete ? (
+                <button
+                  type="button"
+                  onClick={() => onDelete(job)}
+                  disabled={deletingJobId === job.id}
+                  className="rounded-full border border-stone-300 bg-white px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-stone-700 transition hover:bg-stone-50 disabled:opacity-60"
+                >
+                  {deletingJobId === job.id ? "Deleting" : "Delete"}
+                </button>
+              ) : null}
+              <span className="rounded-full bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-600">{job.status}</span>
             </div>
-            <span className="rounded-full bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-600">{job.status}</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.15em] text-stone-500">
             {job.generation_provider ? <span>{job.generation_provider}</span> : null}
@@ -31,7 +55,7 @@ export function JobHistory({ jobs, activeJobId, onSelect, hasMore = false, loadi
           {job.status === "failed" && job.error_message ? (
             <p className="mt-3 text-sm leading-7 text-amber-800">{normalizeJobErrorMessage(job.error_message)}</p>
           ) : null}
-        </button>
+        </article>
       ))}
 
       {hasMore ? (

@@ -335,3 +335,22 @@ export async function cancelNotesJob(jobId, userId) {
   await refundCreditsForNoteJob(jobId, "user_cancelled");
   return getNoteJob(jobId, userId);
 }
+export async function deleteNotesJob(jobId, userId) {
+  const job = await getNoteJob(jobId, userId);
+  if (!job) {
+    return null;
+  }
+
+  if ([JobStatus.QUEUED, JobStatus.PROCESSING].includes(job.status)) {
+    await markJobCancelled(jobId);
+    await cancelPipelineJobs(jobId);
+    await refundCreditsForNoteJob(jobId, "user_deleted");
+  }
+
+  await deleteNoteJob(jobId);
+  return {
+    id: jobId,
+    deleted: true,
+    previousStatus: job.status
+  };
+}

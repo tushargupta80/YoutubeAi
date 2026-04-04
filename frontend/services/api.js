@@ -279,6 +279,13 @@ export function cancelJob(jobId) {
   });
 }
 
+export function deleteJob(jobId) {
+  return request(`/jobs/${jobId}`, {
+    method: "DELETE",
+    timeoutMs: 45000
+  });
+}
+
 export function getJob(jobId) {
   return request(`/jobs/${jobId}`);
 }

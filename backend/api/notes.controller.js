@@ -1,4 +1,4 @@
-import { cancelNotesJob, enqueueManualTranscriptNotesJob, enqueueNotesJob, fetchJobStatus } from "../services/job.service.js";
+import { cancelNotesJob, deleteNotesJob, enqueueManualTranscriptNotesJob, enqueueNotesJob, fetchJobStatus } from "../services/job.service.js";
 import { getBillingSummary } from "../services/billing.service.js";
 import { listRecentNoteJobs } from "../services/notes.repository.js";
 
@@ -79,6 +79,20 @@ export async function cancelJob(req, res, next) {
     }
     const billing = await getBillingSummary(req.user.sub);
     return res.json({ job, billing });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function deleteJob(req, res, next) {
+  try {
+    const deleted = await deleteNotesJob(req.params.jobId, req.user.sub);
+    if (!deleted) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    const billing = await getBillingSummary(req.user.sub);
+    return res.json({ deleted, billing });
   } catch (error) {
     return next(error);
   }

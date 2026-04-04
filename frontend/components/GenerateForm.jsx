@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { cancelJob, generateNotes, generateNotesFromTranscript } from "@/services/api";
+import { cancelJob, deleteJob, generateNotes, generateNotesFromTranscript } from "@/services/api";
 import { useJobStatus } from "@/hooks/useJobStatus";
 import { useRecentJobs } from "@/hooks/useRecentJobs";
 import { getDisplayNotes } from "@/lib/notes-format";
@@ -45,6 +45,7 @@ export function GenerateForm({ billing, onRefreshBilling, initialRecentJobs = nu
   const [copyLabel, setCopyLabel] = useState("Copy Notes");
   const [showHistory, setShowHistory] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [deletingJobId, setDeletingJobId] = useState("");
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [showManualFallback, setShowManualFallback] = useState(false);
 
@@ -82,6 +83,17 @@ export function GenerateForm({ billing, onRefreshBilling, initialRecentJobs = nu
   const visibleJob = jobStatus.job || history.recentJob || null;
   const visibleJobError = normalizeJobErrorMessage(visibleJob?.error_message || "");
   const canShowManualFallback = visibleJob?.status === "failed" && isTranscriptFallbackMessage(visibleJobError);
+
+  function resetDisplayedNotes() {
+    jobStatus.clearJob();
+    setNotes("");
+    setNotesJson(null);
+    setVideoId("");
+    setTitle("");
+    setProvider("");
+    setProcessingSeconds(null);
+    setShowManualFallback(false);
+  }
 
   useEffect(() => {
     if (history.error) {
@@ -214,6 +226,26 @@ export function GenerateForm({ billing, onRefreshBilling, initialRecentJobs = nu
       setError(requestError.message);
     } finally {
       setIsCancelling(false);
+    }
+  }
+
+  async function handleDeleteJob(jobToDelete) {
+    if (!jobToDelete?.id || deletingJobId) return;
+
+    setDeletingJobId(jobToDelete.id);
+    setError("");
+
+    try {
+      await deleteJob(jobToDelete.id);
+      if (jobStatus.jobId === jobToDelete.id || visibleJob?.id === jobToDelete.id) {
+        resetDisplayedNotes();
+      }
+      await history.refresh();
+      await onRefreshBilling?.();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setDeletingJobId("");
     }
   }
 
@@ -358,6 +390,14 @@ export function GenerateForm({ billing, onRefreshBilling, initialRecentJobs = nu
                     {isCancelling ? "Cancelling" : "Cancel"}
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteJob(history.recentJob)}
+                  disabled={deletingJobId === history.recentJob.id}
+                  className="rounded-full border border-stone-300 bg-white px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-stone-700 transition hover:bg-stone-50 disabled:opacity-60"
+                >
+                  {deletingJobId === history.recentJob.id ? "Deleting" : "Delete"}
+                </button>
                 <span className="rounded-full bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-stone-600">{history.recentJob.status}</span>
               </div>
             </div>
@@ -394,6 +434,8 @@ export function GenerateForm({ billing, onRefreshBilling, initialRecentJobs = nu
             <JobHistory
               jobs={history.jobs}
               activeJobId={jobStatus.jobId}
+              deletingJobId={deletingJobId}
+              onDelete={handleDeleteJob}
               onSelect={handleSelectJob}
               hasMore={history.hasMore}
               loadingMore={history.loadingMore}
