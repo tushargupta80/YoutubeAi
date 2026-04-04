@@ -11,7 +11,10 @@ import {
   revokeRefreshSessionByTokenHash,
   rotateRefreshSession
 } from "../services/auth.repository.js";
-import { grantStarterCredits } from "../services/billing.service.js";
+import { getBillingSummary, grantStarterCredits } from "../services/billing.service.js";
+import { getAdminOverview } from "../services/admin.repository.js";
+import { listRecentNoteJobs } from "../services/notes.repository.js";
+import { buildRuntimeSettings } from "./settings.controller.js";
 import { env } from "../config/env.js";
 import { getCookieToken } from "../middleware/auth.js";
 import { createOpaqueToken, hashOpaqueToken, hashPassword, signToken, verifyPassword } from "../utils/auth.js";
@@ -55,14 +58,39 @@ function clearSessionCookies(res) {
   res.clearCookie(env.authRefreshCookieName, baseOptions);
 }
 
-function buildAuthResponse(user) {
+function buildSessionUser(user) {
   return {
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role || "user"
-    }
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || "user"
+  };
+}
+
+function buildAuthResponse(user) {
+  return { user: buildSessionUser(user) };
+}
+
+async function buildWorkspaceBootstrapPayload(user, req) {
+  const refreshToken = getCookieToken(req, env.authRefreshCookieName);
+  const currentTokenHash = refreshToken ? hashOpaqueToken(refreshToken) : "";
+
+  const [sessions, billing, recentJobs, overview] = await Promise.all([
+    listUserRefreshSessions(user.id, currentTokenHash, 12),
+    getBillingSummary(user.id),
+    listRecentNoteJobs(user.id, { limit: 8 }),
+    user.role === "admin" ? getAdminOverview({ limit: 6 }) : Promise.resolve(null)
+  ]);
+
+  return {
+    user: buildSessionUser(user),
+    settings: {
+      ai: buildRuntimeSettings()
+    },
+    sessions,
+    billing,
+    recentJobs,
+    overview
   };
 }
 
@@ -170,12 +198,7 @@ export async function refresh(req, res, next) {
     setSessionCookies(res, session.accessToken, session.refreshToken);
     return res.json({
       ok: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role || "user"
-      }
+      user: buildSessionUser(user)
     });
   } catch (error) {
     return next(error);
@@ -237,6 +260,20 @@ export async function me(req, res, next) {
       return res.status(404).json({ error: "User not found" });
     }
     return res.json({ user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function bootstrap(req, res, next) {
+  try {
+    const user = await getUserById(req.user.sub);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const payload = await buildWorkspaceBootstrapPayload(user, req);
+    return res.json(payload);
   } catch (error) {
     return next(error);
   }

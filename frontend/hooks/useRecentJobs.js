@@ -1,13 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getRecentJobs } from "@/services/api";
 
-export function useRecentJobs({ limit = 8, autoLoad = true } = {}) {
-  const [jobs, setJobs] = useState([]);
-  const [nextCursor, setNextCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(autoLoad);
+const EMPTY_RESPONSE = {
+  jobs: [],
+  nextCursor: null,
+  hasMore: false
+};
+
+export function useRecentJobs({ limit = 8, autoLoad = true, initialData = null } = {}) {
+  const seeded = initialData || EMPTY_RESPONSE;
+  const [jobs, setJobs] = useState(seeded.jobs || []);
+  const [nextCursor, setNextCursor] = useState(seeded.nextCursor || null);
+  const [hasMore, setHasMore] = useState(Boolean(seeded.hasMore));
+  const [loading, setLoading] = useState(autoLoad && !(seeded.jobs || []).length);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const next = initialData || EMPTY_RESPONSE;
+    setJobs(next.jobs || []);
+    setNextCursor(next.nextCursor || null);
+    setHasMore(Boolean(next.hasMore));
+    setLoading(autoLoad && !(next.jobs || []).length);
+  }, [autoLoad, initialData]);
 
   const loadPage = useCallback(async ({ append = false, before = null, status = null } = {}) => {
     const response = await getRecentJobs({ limit, before, status });
@@ -45,9 +60,9 @@ export function useRecentJobs({ limit = 8, autoLoad = true } = {}) {
   }, [loadPage, loadingMore, nextCursor]);
 
   useEffect(() => {
-    if (!autoLoad) return;
+    if (!autoLoad || (initialData?.jobs || []).length) return;
     refresh().catch(() => {});
-  }, [autoLoad, refresh]);
+  }, [autoLoad, initialData, refresh]);
 
   const recentJob = useMemo(() => jobs[0] || null, [jobs]);
 

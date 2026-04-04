@@ -13,7 +13,7 @@ import { listCircuitStates } from "../services/provider-circuit.repository.js";
 import { pingGemini } from "../../ai_pipeline/generator/provider.gemini.js";
 import { pingOllama } from "../../ai_pipeline/generator/provider.ollama.js";
 
-function buildRuntimeSettings() {
+export function buildRuntimeSettings() {
   return {
     primaryProvider: env.geminiApiKey ? "gemini" : "ollama",
     geminiConfigured: Boolean(env.geminiApiKey),

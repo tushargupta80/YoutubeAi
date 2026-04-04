@@ -175,6 +175,10 @@ export function getMe() {
   return request("/auth/me");
 }
 
+export function getWorkspaceBootstrap() {
+  return request("/auth/bootstrap");
+}
+
 export function getMySessions() {
   return request("/auth/sessions");
 }

@@ -6,9 +6,7 @@ import {
   createBillingCheckout,
   getAdminOverview,
   getBillingSummary,
-  getMe,
-  getMySessions,
-  getSettings,
+  getWorkspaceBootstrap,
   login,
   logout as logoutRequest,
   logoutAll as logoutAllRequest,
@@ -45,6 +43,12 @@ function ensureRazorpayLoaded() {
   return razorpayLoader;
 }
 
+const EMPTY_RECENT_JOBS = {
+  jobs: [],
+  nextCursor: null,
+  hasMore: false
+};
+
 export function useWorkspaceSession() {
   const [mode, setMode] = useState("login");
   const [user, setUser] = useState(null);
@@ -52,6 +56,7 @@ export function useWorkspaceSession() {
   const [billing, setBilling] = useState(null);
   const [overview, setOverview] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [recentJobsBootstrap, setRecentJobsBootstrap] = useState(EMPTY_RECENT_JOBS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
@@ -64,45 +69,46 @@ export function useWorkspaceSession() {
   const [loggingOutAll, setLoggingOutAll] = useState(false);
   const [purchasingPlanId, setPurchasingPlanId] = useState("");
 
+  const clearWorkspace = useCallback(() => {
+    setUser(null);
+    setSettings(null);
+    setBilling(null);
+    setOverview(null);
+    setSessions([]);
+    setRecentJobsBootstrap(EMPTY_RECENT_JOBS);
+  }, []);
+
+  const applyWorkspaceBootstrap = useCallback((payload) => {
+    setUser(payload?.user || null);
+    setSettings(payload?.settings?.ai || null);
+    setBilling(payload?.billing || null);
+    setOverview(payload?.overview || null);
+    setSessions(payload?.sessions || []);
+    setRecentJobsBootstrap(payload?.recentJobs || EMPTY_RECENT_JOBS);
+    return payload?.user || null;
+  }, []);
+
+  const loadWorkspace = useCallback(async () => {
+    const payload = await getWorkspaceBootstrap();
+    applyWorkspaceBootstrap(payload);
+    return payload;
+  }, [applyWorkspaceBootstrap]);
+
   const refreshBilling = useCallback(async () => {
     const summary = await getBillingSummary();
     setBilling(summary);
     return summary;
   }, []);
 
-  const loadWorkspace = useCallback(async (currentUser) => {
-    const [runtime, currentSessions, billingSummary] = await Promise.all([
-      getSettings(),
-      getMySessions().catch(() => ({ sessions: [] })),
-      getBillingSummary().catch(() => null)
-    ]);
-    setSettings(runtime.ai);
-    setSessions(currentSessions.sessions || []);
-    setBilling(billingSummary);
-
-    if (currentUser?.role === "admin") {
-      const admin = await getAdminOverview({ limit: 6 });
-      setOverview(admin);
-    } else {
-      setOverview(null);
-    }
-  }, []);
-
   const refreshCurrentUserRole = useCallback(async () => {
     try {
-      const response = await getMe();
-      setUser(response.user);
-      await loadWorkspace(response.user);
-      return response.user;
+      const payload = await loadWorkspace();
+      return payload?.user || null;
     } catch {
-      setUser(null);
-      setSettings(null);
-      setBilling(null);
-      setOverview(null);
-      setSessions([]);
+      clearWorkspace();
       return null;
     }
-  }, [loadWorkspace]);
+  }, [clearWorkspace, loadWorkspace]);
 
   const handleAdminRequest = useCallback(async (action) => {
     try {
@@ -122,28 +128,21 @@ export function useWorkspaceSession() {
   useEffect(() => {
     async function hydrate() {
       try {
-        const response = await getMe();
-        setUser(response.user);
-        await loadWorkspace(response.user);
+        await loadWorkspace();
       } catch {
-        setUser(null);
-        setSettings(null);
-        setBilling(null);
-        setOverview(null);
-        setSessions([]);
+        clearWorkspace();
       } finally {
         setLoading(false);
       }
     }
 
     hydrate();
-  }, [loadWorkspace]);
+  }, [clearWorkspace, loadWorkspace]);
 
   const authenticate = useCallback(async ({ mode: nextMode, name, email, password }) => {
     setError("");
     const response = nextMode === "login" ? await login(email, password) : await register(name, email, password);
-    setUser(response.user);
-    await loadWorkspace(response.user);
+    await loadWorkspace();
     return response;
   }, [loadWorkspace]);
 
@@ -153,27 +152,19 @@ export function useWorkspaceSession() {
     } catch {
       // Clear local state even if the network request fails.
     }
-    setUser(null);
-    setSettings(null);
-    setBilling(null);
-    setOverview(null);
-    setSessions([]);
-  }, []);
+    clearWorkspace();
+  }, [clearWorkspace]);
 
   const logoutAll = useCallback(async () => {
     setLoggingOutAll(true);
     setError("");
     try {
       await logoutAllRequest();
-      setUser(null);
-      setSettings(null);
-      setBilling(null);
-      setOverview(null);
-      setSessions([]);
+      clearWorkspace();
     } finally {
       setLoggingOutAll(false);
     }
-  }, []);
+  }, [clearWorkspace]);
 
   const purchasePlan = useCallback(async (planId) => {
     if (!planId || purchasingPlanId) return null;
@@ -372,6 +363,7 @@ export function useWorkspaceSession() {
     billing,
     overview,
     sessions,
+    recentJobsBootstrap,
     loading,
     error,
     setError,

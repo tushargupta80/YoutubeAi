@@ -5,7 +5,7 @@ import { cancelJob, generateNotes, generateNotesFromTranscript } from "@/service
 import { useJobStatus } from "@/hooks/useJobStatus";
 import { useRecentJobs } from "@/hooks/useRecentJobs";
 import { getDisplayNotes } from "@/lib/notes-format";
-import { normalizeJobErrorMessage } from "@/lib/job-errors";
+import { isTranscriptFallbackError, normalizeJobErrorMessage } from "@/lib/job-errors";
 import { ProgressCard } from "@/components/ProgressCard";
 import { NotesViewer } from "@/components/NotesViewer";
 import { QuestionBox } from "@/components/QuestionBox";
@@ -20,12 +20,9 @@ function isActiveJob(job) {
   return job?.status === "queued" || job?.status === "processing";
 }
 
-function isTranscriptFallbackError(message) {
-  const normalized = String(message || "").toLowerCase();
-  return normalized.includes("transcript not available");
-}
 
-export function GenerateForm({ billing, onRefreshBilling }) {
+
+export function GenerateForm({ billing, onRefreshBilling, initialRecentJobs = null }) {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [manualTitle, setManualTitle] = useState("");
   const [manualTranscript, setManualTranscript] = useState("");
@@ -42,7 +39,7 @@ export function GenerateForm({ billing, onRefreshBilling }) {
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [showManualFallback, setShowManualFallback] = useState(false);
 
-  const history = useRecentJobs({ limit: 8, autoLoad: true });
+  const history = useRecentJobs({ limit: 8, autoLoad: true, initialData: initialRecentJobs });
   const jobStatus = useJobStatus({
     onJobUpdated(nextJob) {
       if (nextJob?.status === "completed" || nextJob?.status === "failed") {
@@ -362,7 +359,7 @@ export function GenerateForm({ billing, onRefreshBilling }) {
             {history.recentJob.status === "failed" && history.recentJob.error_message ? (
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <p className="text-sm leading-7 text-amber-800">{normalizeJobErrorMessage(history.recentJob.error_message)}</p>
-                {isTranscriptFallbackError(history.recentJob.error_message) ? (
+                {isTranscriptFallbackError(normalizeJobErrorMessage(history.recentJob.error_message)) ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -418,3 +415,4 @@ export function GenerateForm({ billing, onRefreshBilling }) {
     </div>
   );
 }
+

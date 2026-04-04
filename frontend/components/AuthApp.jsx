@@ -144,6 +144,7 @@ export function AuthApp() {
     billing,
     overview,
     sessions,
+    recentJobsBootstrap,
     loading,
     error,
     setError,
@@ -265,7 +266,7 @@ export function AuthApp() {
         </>
       ) : null}
 
-      <GenerateForm billing={billing} onRefreshBilling={refreshBilling} />
+      <GenerateForm billing={billing} onRefreshBilling={refreshBilling} initialRecentJobs={recentJobsBootstrap} />
     </div>
   );
 }
