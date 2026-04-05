@@ -7,6 +7,7 @@ import {
   YoutubeTranscriptTooManyRequestError,
   YoutubeTranscriptVideoUnavailableError
 } from "youtube-transcript/dist/youtube-transcript.esm.js";
+import { logInfo, logWarn } from "../../backend/utils/logger.js";
 
 const PLAYER_ENDPOINT = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
 const WEB_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
@@ -49,7 +50,7 @@ const INNER_TUBE_CLIENTS = [
   }
 ];
 
-function normalizeTranscriptItems(transcript) {
+function normalizeTranscriptItems(transcript, meta = {}) {
   const items = transcript.map((item, index) => ({
     index,
     text: String(item.text || "").trim(),
@@ -60,7 +61,10 @@ function normalizeTranscriptItems(transcript) {
 
   return {
     transcript: items,
-    plainText: items.map((item) => item.text).join(" ")
+    plainText: items.map((item) => item.text).join(" "),
+    source: meta.source || "unknown",
+    client: meta.client || null,
+    languageCode: meta.languageCode || items[0]?.lang || null
   };
 }
 
@@ -216,9 +220,23 @@ async function fetchTranscriptWithAlternateClients(videoId, preferredLanguages, 
 
   for (const client of INNER_TUBE_CLIENTS) {
     try {
-      return await fetchTranscriptWithClient(videoId, client, preferredLanguages, fetchImpl);
+      const transcript = await fetchTranscriptWithClient(videoId, client, preferredLanguages, fetchImpl);
+      logInfo("Transcript fallback client succeeded", {
+        videoId,
+        transcriptSource: "alternate-client",
+        transcriptClient: client.clientName,
+        transcriptLanguage: transcript[0]?.lang || preferredLanguages[0],
+        transcriptItemCount: transcript.length
+      });
+      return transcript;
     } catch (error) {
       lastError = error;
+      logWarn("Transcript fallback client failed", {
+        videoId,
+        transcriptSource: "alternate-client",
+        transcriptClient: client.clientName,
+        error: error instanceof Error ? error.message : String(error)
+      });
       if (error instanceof YoutubeTranscriptTooManyRequestError || error instanceof YoutubeTranscriptVideoUnavailableError) {
         throw error;
       }
@@ -235,16 +253,44 @@ export async function extractTranscript(youtubeUrl) {
 
   try {
     const transcript = await transcriptClient.fetchTranscript(youtubeUrl, { lang: preferredLanguages[0] });
-    return normalizeTranscriptItems(transcript);
+    logInfo("Transcript extraction succeeded", {
+      videoId,
+      transcriptSource: "youtube-transcript",
+      transcriptClient: "default-library",
+      transcriptLanguage: transcript[0]?.lang || preferredLanguages[0],
+      transcriptItemCount: transcript.length
+    });
+    return normalizeTranscriptItems(transcript, {
+      source: "youtube-transcript",
+      client: "default-library",
+      languageCode: transcript[0]?.lang || preferredLanguages[0]
+    });
   } catch (primaryError) {
+    logWarn("Primary transcript extraction failed", {
+      videoId,
+      transcriptSource: "youtube-transcript",
+      transcriptClient: "default-library",
+      error: primaryError instanceof Error ? primaryError.message : String(primaryError)
+    });
+
     if (primaryError instanceof YoutubeTranscriptTooManyRequestError || primaryError instanceof YoutubeTranscriptVideoUnavailableError) {
       throw primaryError;
     }
 
     try {
       const transcript = await fetchTranscriptWithAlternateClients(videoId, preferredLanguages);
-      return normalizeTranscriptItems(transcript);
+      return normalizeTranscriptItems(transcript, {
+        source: "alternate-client",
+        client: "fallback-chain",
+        languageCode: transcript[0]?.lang || preferredLanguages[0]
+      });
     } catch (fallbackError) {
+      logWarn("Transcript extraction failed after all fallbacks", {
+        videoId,
+        transcriptSource: "alternate-client",
+        transcriptClient: "fallback-chain",
+        error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+      });
       throw fallbackError instanceof Error ? fallbackError : primaryError;
     }
   }

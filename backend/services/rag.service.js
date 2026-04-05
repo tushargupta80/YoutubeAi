@@ -16,7 +16,7 @@ import { extractTranscript } from "../../ai_pipeline/transcript/extractTranscrip
 import { vectorStore } from "./vector-store.js";
 import { getVideoById, upsertVideo } from "./video.repository.js";
 import { env } from "../config/env.js";
-import { logError } from "../utils/logger.js";
+import { logError, logInfo } from "../utils/logger.js";
 
 const MAX_CONCEPT_CHUNKS = 2;
 const MAX_PROMPT_CHARS = 2200;
@@ -108,6 +108,14 @@ function buildTranscriptSummary(conceptAnalyses, cleanedTranscript) {
 export async function extractVideoArtifacts({ youtubeUrl, onProgress }) {
   onProgress?.(15, "extracting transcript");
   const extracted = await extractTranscript(youtubeUrl);
+
+  logInfo("Transcript artifacts extracted", {
+    youtubeUrl,
+    transcriptSource: extracted.source || "unknown",
+    transcriptClient: extracted.client || null,
+    transcriptLanguage: extracted.languageCode || null,
+    transcriptItemCount: extracted.transcript?.length || 0
+  });
 
   onProgress?.(30, "normalizing transcript");
   const cleanedTranscript = localCleanTranscript(extracted.transcript);
