@@ -6,6 +6,15 @@ export function normalizeJobErrorMessage(message) {
 
   const normalized = rawMessage.toLowerCase();
   if (
+    normalized.includes("too many requests")
+    || normalized.includes("captcha")
+    || normalized.includes("youtube is receiving too many requests")
+    || normalized.includes("youtubetranscript")
+  ) {
+    return "YouTube temporarily blocked transcript access for this video. Please try again in a few minutes, try another video, or paste the transcript manually.";
+  }
+
+  if (
     normalized.includes("transcript is disabled")
     || normalized.includes("could not retrieve a transcript")
     || normalized.includes("no transcript")

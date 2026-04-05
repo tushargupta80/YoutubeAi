@@ -6,6 +6,15 @@ export function normalizeJobErrorMessage(message) {
 
   const normalized = rawMessage.toLowerCase();
   if (
+    normalized.includes("too many requests")
+    || normalized.includes("captcha")
+    || normalized.includes("youtube is receiving too many requests")
+    || normalized.includes("youtubetranscript")
+  ) {
+    return "YouTube temporarily blocked transcript access for this video. Please try again in a few minutes, try another video, or paste the transcript manually.";
+  }
+
+  if (
     normalized.includes("transcript is disabled")
     || normalized.includes("could not retrieve a transcript")
     || normalized.includes("no transcript")
@@ -16,4 +25,15 @@ export function normalizeJobErrorMessage(message) {
   }
 
   return rawMessage;
+}
+
+export function isTranscriptFallbackError(message) {
+  const normalized = String(message || "").toLowerCase();
+  return (
+    normalized.includes("transcript not available")
+    || normalized.includes("temporarily blocked transcript access")
+    || normalized.includes("too many requests")
+    || normalized.includes("captcha")
+    || normalized.includes("youtubetranscript")
+  );
 }
