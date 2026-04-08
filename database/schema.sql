@@ -258,3 +258,18 @@ CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_created_at ON credit_ledger (u
 CREATE INDEX IF NOT EXISTS idx_credit_ledger_reference ON credit_ledger (reference_type, reference_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_billing_orders_user_created_at ON billing_orders (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_billing_orders_provider_order_id ON billing_orders (provider_order_id);
+
+ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_refresh_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE note_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE question_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vector_chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_provider_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_provider_circuits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE queue_dead_letters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_request_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_credit_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE credit_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE billing_orders ENABLE ROW LEVEL SECURITY;
