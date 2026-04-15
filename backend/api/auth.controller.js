@@ -15,7 +15,6 @@ import {
   updateUserProfile
 } from "../services/auth.repository.js";
 import { getBillingSummary, grantStarterCredits } from "../services/billing.service.js";
-import { getAdminOverview } from "../services/admin.repository.js";
 import { listRecentNoteJobs } from "../services/notes.repository.js";
 import { buildRuntimeSettings } from "./settings.controller.js";
 import { env } from "../config/env.js";
@@ -97,11 +96,10 @@ async function buildWorkspaceBootstrapPayload(user, req) {
   const refreshToken = getCookieToken(req, env.authRefreshCookieName);
   const currentTokenHash = refreshToken ? hashOpaqueToken(refreshToken) : "";
 
-  const [sessions, billing, recentJobs, overview] = await Promise.all([
+  const [sessions, billing, recentJobs] = await Promise.all([
     listUserRefreshSessions(user.id, currentTokenHash, 12),
     getBillingSummary(user.id),
-    listRecentNoteJobs(user.id, { limit: 8 }),
-    user.role === "admin" ? getAdminOverview({ limit: 6 }) : Promise.resolve(null)
+    listRecentNoteJobs(user.id, { limit: 8 })
   ]);
 
   return {
@@ -112,7 +110,7 @@ async function buildWorkspaceBootstrapPayload(user, req) {
     sessions,
     billing,
     recentJobs,
-    overview
+    overview: null
   };
 }
 

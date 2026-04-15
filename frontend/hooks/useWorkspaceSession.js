@@ -94,7 +94,19 @@ export function useWorkspaceSession() {
 
   const loadWorkspace = useCallback(async () => {
     const payload = await getWorkspaceBootstrap();
-    applyWorkspaceBootstrap(payload);
+    const nextUser = applyWorkspaceBootstrap(payload);
+
+    if (nextUser?.role === "admin") {
+      setOverview(null);
+      getAdminOverview({ limit: 6 })
+        .then((adminOverview) => {
+          setOverview(adminOverview || null);
+        })
+        .catch(() => {
+          setOverview(null);
+        });
+    }
+
     return payload;
   }, [applyWorkspaceBootstrap]);
 
