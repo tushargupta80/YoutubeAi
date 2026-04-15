@@ -70,6 +70,14 @@ function normalizeTranscriptItems(transcript, meta = {}) {
   };
 }
 
+function createTranscriptFallbackFailure(error) {
+  const detail = error instanceof Error ? error.message : String(error || "");
+  const reason = detail ? ` Reason: ${detail}` : "";
+  return new Error(
+    `Automatic transcript extraction failed after trying multiple YouTube caption methods, including direct transcript access and yt-dlp subtitle fallback.${reason}`
+  );
+}
+
 function retrieveVideoId(value) {
   const source = String(value || "").trim();
   if (source.length === 11 && !source.includes("/")) return source;
@@ -524,7 +532,9 @@ export async function extractTranscript(youtubeUrl) {
           transcriptClient: env.ytDlpBinary,
           error: ytDlpError instanceof Error ? ytDlpError.message : String(ytDlpError)
         });
-        throw ytDlpError instanceof Error ? ytDlpError : alternateError instanceof Error ? alternateError : primaryError;
+        throw createTranscriptFallbackFailure(
+          ytDlpError instanceof Error ? ytDlpError : alternateError instanceof Error ? alternateError : primaryError
+        );
       }
     }
   }
