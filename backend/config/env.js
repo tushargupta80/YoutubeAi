@@ -106,6 +106,9 @@ const env = {
   workerEmbedConcurrency: parseNumber(process.env.WORKER_EMBED_CONCURRENCY, 2),
   workerNotesConcurrency: parseNumber(process.env.WORKER_NOTES_CONCURRENCY, 1),
   workerQaConcurrency: parseNumber(process.env.WORKER_QA_CONCURRENCY, 2),
+  ytDlpEnabled: parseBoolean(process.env.YT_DLP_ENABLED, true),
+  ytDlpBinary: process.env.YT_DLP_BINARY || "yt-dlp",
+  ytDlpTimeoutMs: parseNumber(process.env.YT_DLP_TIMEOUT_MS, 60 * 1000),
   observabilityLogSinkUrl: process.env.OBSERVABILITY_LOG_SINK_URL || "",
   observabilityLogSinkToken: process.env.OBSERVABILITY_LOG_SINK_TOKEN || "",
   billingStarterCredits: parseNumber(process.env.BILLING_STARTER_CREDITS, 20),
@@ -147,6 +150,7 @@ if (env.workerIngestConcurrency <= 0) errors.push("WORKER_INGEST_CONCURRENCY mus
 if (env.workerEmbedConcurrency <= 0) errors.push("WORKER_EMBED_CONCURRENCY must be a positive number");
 if (env.workerNotesConcurrency <= 0) errors.push("WORKER_NOTES_CONCURRENCY must be a positive number");
 if (env.workerQaConcurrency <= 0) errors.push("WORKER_QA_CONCURRENCY must be a positive number");
+if (env.ytDlpTimeoutMs <= 0) errors.push("YT_DLP_TIMEOUT_MS must be a positive number");
 if (env.observabilityMetricsWindowSize <= 0) errors.push("OBSERVABILITY_METRICS_WINDOW_SIZE must be a positive number");
 if (env.billingStarterCredits < 0) errors.push("BILLING_STARTER_CREDITS must be zero or more");
 if (env.noteGenerationCreditCost <= 0) errors.push("NOTE_GENERATION_CREDIT_COST must be a positive number");
